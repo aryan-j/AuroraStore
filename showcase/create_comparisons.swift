@@ -17,9 +17,12 @@ struct Pair {
 
 let pairs = [
     Pair(slug: "for-you", title: "For You", stock: "original-home.png", expressive: "modified-home.png"),
+    Pair(slug: "home-actions", title: "Home card actions", stock: "original-home-actions.png", expressive: "modified-home-actions.png"),
     Pair(slug: "top-charts", title: "Top Charts", stock: "original-top-charts.png", expressive: "modified-top-charts.png"),
     Pair(slug: "categories", title: "Categories", stock: "original-categories.png", expressive: "modified-categories.png"),
     Pair(slug: "app-details", title: "App Details · Canva", stock: "original-details-canva.png", expressive: "modified-details-canva.png"),
+    Pair(slug: "settings", title: "Settings", stock: "original-settings.png", expressive: "modified-settings.png"),
+    Pair(slug: "customization", title: "Customization", stock: "original-customization.png", expressive: "modified-customization.png"),
 ]
 
 func loadImage(_ name: String) throws -> CGImage {
