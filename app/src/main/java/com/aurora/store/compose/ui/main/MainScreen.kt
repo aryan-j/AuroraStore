@@ -5,6 +5,7 @@
 
 package com.aurora.store.compose.ui.main
 
+import android.content.ActivityNotFoundException
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
@@ -59,6 +60,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -77,6 +79,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aurora.extensions.requiresObbDir
+import com.aurora.extensions.requiresGMS
+import com.aurora.extensions.toast
+import com.aurora.gplayapi.data.models.App
 import com.aurora.store.MainViewModel
 import com.aurora.store.R
 import com.aurora.store.compose.composable.InsufficientStorageDialog
@@ -92,12 +97,15 @@ import com.aurora.store.compose.ui.search.SearchScreen
 import com.aurora.store.compose.ui.search.searchPanelMotionSpec
 import com.aurora.store.compose.ui.updates.UpdatesScreen
 import com.aurora.store.data.model.ExodusTracker
+import com.aurora.store.data.model.DownloadStatus
 import com.aurora.store.data.model.NetworkStatus
 import com.aurora.store.data.model.PermissionType
 import com.aurora.store.data.model.StorageRequirement
 import com.aurora.store.data.providers.PermissionProvider.Companion.isGranted
+import com.aurora.store.data.providers.PermissionProvider.Companion.isPermittedToInstall
 import com.aurora.store.data.room.update.Update
 import com.aurora.store.util.PackageUtil
+import com.aurora.store.util.FlavouredUtil
 import com.aurora.store.util.Preferences
 import com.aurora.store.util.Preferences.PREFERENCE_UPDATES_WARN_TRACKERS
 import com.aurora.store.util.StorageUtil
@@ -132,6 +140,15 @@ fun MainScreen(
     val updateCount = updates?.size ?: 0
     val notificationCount by notificationsViewModel.unreadCount.collectAsStateWithLifecycle()
     val downloads by updatesViewModel.downloadsList.collectAsStateWithLifecycle()
+    val cancellingPackages by updatesViewModel.cancellingPackages.collectAsStateWithLifecycle()
+    val downloadsByPackage = remember(downloads) {
+        downloads.associateBy { it.packageName }
+    }
+    val updatesByPackage = remember(updates) {
+        updates.orEmpty().associateBy { it.packageName }
+    }
+    val latestDownloadsByPackage by rememberUpdatedState(downloadsByPackage)
+    val latestUpdatesByPackage by rememberUpdatedState(updatesByPackage)
 
     val coroutineScope = rememberCoroutineScope()
     val pagerState = rememberPagerState(
@@ -216,6 +233,73 @@ fun MainScreen(
         }
     }
 
+    fun performHomeAppAction(app: App) {
+        // Pager pages can outlive the recomposition that supplied their action lambda. Read
+        // current download/update state at click time so a stale Install callback cannot enqueue
+        // a second request when the visible button has already changed to Cancel.
+        val download = latestDownloadsByPackage[app.packageName]
+        when (download?.status) {
+            DownloadStatus.QUEUED,
+            DownloadStatus.PURCHASING,
+            DownloadStatus.DOWNLOADING -> {
+                updatesViewModel.cancelDownload(app.packageName)
+                return
+            }
+
+            DownloadStatus.COMPLETED,
+            DownloadStatus.VERIFYING,
+            DownloadStatus.AWAITING_INSTALL,
+            DownloadStatus.INSTALLING -> return
+
+            else -> Unit
+        }
+
+        latestUpdatesByPackage[app.packageName]?.let { update ->
+            performUpdate(update)
+            return
+        }
+
+        if (PackageUtil.isInstalled(context, app.packageName) ||
+            download?.status == DownloadStatus.INSTALLED
+        ) {
+            try {
+                val launchIntent = PackageUtil.getLaunchIntent(context, app.packageName)
+                if (launchIntent != null) {
+                    context.startActivity(launchIntent)
+                } else {
+                    context.toast(R.string.unable_to_open)
+                }
+            } catch (_: ActivityNotFoundException) {
+                context.toast(R.string.unable_to_open)
+            }
+            return
+        }
+
+        val requiredPermissions = setOfNotNull(
+            PermissionType.INSTALL_UNKNOWN_APPS,
+            if (app.fileList.requiresObbDir()) PermissionType.STORAGE_MANAGER else null,
+            if (app.fileList.requiresObbDir()) PermissionType.EXTERNAL_STORAGE else null
+        )
+        if (!isPermittedToInstall(context, app)) {
+            handleNavigation(
+                Destination.PermissionRationale(permissions = requiredPermissions)
+            )
+            return
+        }
+
+        val needsDetailsInstallFlow = !app.isFree ||
+            (app.requiresGMS() && FlavouredUtil.promptMicroGInstall(context))
+        if (needsDetailsInstallFlow) {
+            handleNavigation(Destination.AppDetails(app.packageName))
+        } else {
+            updatesViewModel.downloadApp(app) {
+                coroutineScope.launch {
+                    handleNavigation(Destination.AppDetails(app.packageName))
+                }
+            }
+        }
+    }
+
     if (networkStatus == NetworkStatus.UNAVAILABLE) {
         NetworkScreen()
         return
@@ -242,7 +326,11 @@ fun MainScreen(
         )
     }
 
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
         Scaffold(
             modifier = Modifier
                 .fillMaxSize()
@@ -307,10 +395,18 @@ fun MainScreen(
                     when (MainTab.entries[page]) {
                         MainTab.APPS -> AppsGamesScreen(
                             pageType = 0,
+                            downloadsByPackage = downloadsByPackage,
+                            cancellingPackageNames = cancellingPackages,
+                            updatablePackageNames = updatesByPackage.keys,
+                            onAppAction = ::performHomeAppAction,
                             onNavigateTo = onNavigateTo
                         )
                         MainTab.GAMES -> AppsGamesScreen(
                             pageType = 1,
+                            downloadsByPackage = downloadsByPackage,
+                            cancellingPackageNames = cancellingPackages,
+                            updatablePackageNames = updatesByPackage.keys,
+                            onAppAction = ::performHomeAppAction,
                             onNavigateTo = ::handleNavigation
                         )
                         MainTab.UPDATES -> {

@@ -9,8 +9,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -26,8 +28,15 @@ import com.aurora.store.data.room.account.Account
 
 @Composable
 fun AccountListItem(account: Account, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val itemShape = RoundedCornerShape(dimensionResource(R.dimen.radius_large))
     AuroraListItem(
-        modifier = modifier,
+        modifier = modifier
+            .padding(
+                horizontal = dimensionResource(R.dimen.spacing_large),
+                vertical = dimensionResource(R.dimen.spacing_xsmall)
+            )
+            .clip(itemShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow, itemShape),
         headline = if (account.isAnonymous) {
             stringResource(R.string.account_anonymous)
         } else {

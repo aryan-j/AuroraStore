@@ -11,8 +11,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -30,18 +28,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewWrapper
 import androidx.core.net.toUri
-import com.aurora.extensions.isSAndAbove
 import com.aurora.extensions.isTAndAbove
-import com.aurora.extensions.setAppTheme
 import com.aurora.store.R
 import com.aurora.store.compose.composable.TopAppBar
 import com.aurora.store.compose.preview.ThemePreviewProvider
 import com.aurora.store.compose.ui.preferences.network.SingleChoiceDialog
 import com.aurora.store.util.Preferences
 import com.aurora.store.util.Preferences.PREFERENCE_DEFAULT_SELECTED_TAB
-import com.aurora.store.util.Preferences.PREFERENCE_DYNAMIC_COLORS
 import com.aurora.store.util.Preferences.PREFERENCE_FOR_YOU
-import com.aurora.store.util.Preferences.PREFERENCE_THEME_STYLE
 import com.aurora.store.util.save
 
 @Composable
@@ -53,10 +47,6 @@ fun UIPreferenceScreen() {
 private fun ScreenContent() {
     val context = LocalContext.current
 
-    val themeEntries = stringArrayResource(R.array.pref_theme_style)
-    var themeStyle by remember {
-        mutableIntStateOf(Preferences.getInteger(context, PREFERENCE_THEME_STYLE))
-    }
     val tabEntries = stringArrayResource(R.array.pref_default_tab)
     var selectedTab by remember {
         mutableIntStateOf(Preferences.getInteger(context, PREFERENCE_DEFAULT_SELECTED_TAB))
@@ -64,32 +54,7 @@ private fun ScreenContent() {
     var forYou by remember {
         mutableStateOf(Preferences.getBoolean(context, PREFERENCE_FOR_YOU, true))
     }
-    var dynamicColors by remember {
-        mutableStateOf(
-            Preferences.getBoolean(
-                context,
-                PREFERENCE_DYNAMIC_COLORS,
-                Preferences.dynamicColorsDefault
-            )
-        )
-    }
-    var showThemeDialog by remember { mutableStateOf(false) }
     var showTabDialog by remember { mutableStateOf(false) }
-
-    if (showThemeDialog) {
-        SingleChoiceDialog(
-            title = stringResource(R.string.pref_ui_theme),
-            options = themeEntries.toList(),
-            selected = themeStyle,
-            onSelect = { index ->
-                themeStyle = index
-                context.save(PREFERENCE_THEME_STYLE, index)
-                setAppTheme(index)
-                showThemeDialog = false
-            },
-            onDismiss = { showThemeDialog = false }
-        )
-    }
 
     if (showTabDialog) {
         SingleChoiceDialog(
@@ -119,7 +84,7 @@ private fun ScreenContent() {
         ) {
             if (isTAndAbove) {
                 item {
-                    ListItem(
+                    PreferenceListItem(
                         modifier = Modifier.clickable {
                             context.startActivity(
                                 Intent(Settings.ACTION_APP_LOCALE_SETTINGS).apply {
@@ -132,57 +97,17 @@ private fun ScreenContent() {
                     )
                 }
             }
-            item { HorizontalDivider() }
+            item { PreferenceSectionHeader(stringResource(R.string.pref_ui_layout)) }
             item {
-                ListItem(headlineContent = { Text(stringResource(R.string.pref_ui_theme)) })
-            }
-            item {
-                ListItem(
-                    modifier = Modifier.clickable { showThemeDialog = true },
-                    headlineContent = { Text(stringResource(R.string.pref_ui_theme)) },
-                    supportingContent = { Text(themeEntries.getOrElse(themeStyle) { "" }) }
-                )
-            }
-            if (isSAndAbove) {
-                item {
-                    ListItem(
-                        modifier = Modifier.clickable {
-                            dynamicColors = !dynamicColors
-                            context.save(PREFERENCE_DYNAMIC_COLORS, dynamicColors)
-                        },
-                        headlineContent = { Text(stringResource(R.string.pref_ui_dynamic_color)) },
-                        supportingContent = {
-                            Text(stringResource(R.string.pref_ui_dynamic_color_desc))
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = dynamicColors,
-                                onCheckedChange = { checked ->
-                                    dynamicColors = checked
-                                    context.save(PREFERENCE_DYNAMIC_COLORS, checked)
-                                }
-                            )
-                        }
-                    )
-                }
-            }
-            item { HorizontalDivider() }
-            item {
-                ListItem(headlineContent = { Text(stringResource(R.string.pref_ui_layout)) })
-            }
-            item {
-                ListItem(
+                PreferenceListItem(
                     modifier = Modifier.clickable { showTabDialog = true },
                     headlineContent = { Text(stringResource(R.string.pref_ui_layout_tab)) },
                     supportingContent = { Text(tabEntries.getOrElse(selectedTab) { "" }) }
                 )
             }
-            item { HorizontalDivider() }
+            item { PreferenceSectionHeader(stringResource(R.string.pref_common_extra)) }
             item {
-                ListItem(headlineContent = { Text(stringResource(R.string.pref_common_extra)) })
-            }
-            item {
-                ListItem(
+                PreferenceListItem(
                     modifier = Modifier.clickable {
                         forYou = !forYou
                         context.save(PREFERENCE_FOR_YOU, forYou)

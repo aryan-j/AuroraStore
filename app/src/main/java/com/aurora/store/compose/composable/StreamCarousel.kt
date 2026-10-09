@@ -36,6 +36,7 @@ import com.aurora.store.R
 import com.aurora.store.compose.composable.app.AppListItem
 import com.aurora.store.compose.composable.app.LargeAppListItem
 import com.aurora.store.compose.preview.ThemePreviewProvider
+import com.aurora.store.data.room.download.Download
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 private const val LOAD_MORE_THRESHOLD = 2
@@ -45,10 +46,15 @@ fun StreamCarousel(
     modifier: Modifier = Modifier,
     streamBundle: StreamBundle?,
     bottomContentPadding: Dp = 0.dp,
+    showHomeActions: Boolean = false,
+    downloadsByPackage: Map<String, Download> = emptyMap(),
+    cancellingPackageNames: Set<String> = emptySet(),
+    updatablePackageNames: Set<String> = emptySet(),
     filterSingleAppClusters: Boolean = true,
     lazyListState: LazyListState = rememberLazyListState(),
     onHeaderClick: (StreamCluster) -> Unit = {},
     onAppClick: (App) -> Unit = {},
+    onAppAction: (App) -> Unit = {},
     onClusterScrolled: (StreamCluster) -> Unit = {},
     onScrolledToEnd: () -> Unit = {}
 ) {
@@ -116,6 +122,11 @@ fun StreamCarousel(
                     app = apps[index],
                     itemIndex = index,
                     itemCount = apps.size,
+                    showHomeAction = showHomeActions,
+                    download = downloadsByPackage[apps[index].packageName],
+                    isUpdatable = apps[index].packageName in updatablePackageNames,
+                    isCancellationPending = apps[index].packageName in cancellingPackageNames,
+                    onActionClick = { onAppAction(apps[index]) },
                     onClick = { onAppClick(apps[index]) }
                 )
             }
@@ -134,7 +145,12 @@ fun StreamCarousel(
                 item(key = "row_${cluster.id}") {
                     ClusterRow(
                         cluster = cluster,
+                        showHomeActions = showHomeActions,
+                        downloadsByPackage = downloadsByPackage,
+                        cancellingPackageNames = cancellingPackageNames,
+                        updatablePackageNames = updatablePackageNames,
                         onAppClick = onAppClick,
+                        onAppAction = onAppAction,
                         onClusterScrolled = onClusterScrolled
                     )
                 }
@@ -150,7 +166,12 @@ fun StreamCarousel(
 @Composable
 internal fun ClusterRow(
     cluster: StreamCluster,
+    showHomeActions: Boolean = false,
+    downloadsByPackage: Map<String, Download> = emptyMap(),
+    cancellingPackageNames: Set<String> = emptySet(),
+    updatablePackageNames: Set<String> = emptySet(),
     onAppClick: (App) -> Unit = {},
+    onAppAction: (App) -> Unit = {},
     onClusterScrolled: (StreamCluster) -> Unit = {},
     horizontalContentPadding: Dp? = null
 ) {
@@ -180,6 +201,11 @@ internal fun ClusterRow(
         ) { _, app ->
             AppListItem(
                 app = app,
+                showHomeAction = showHomeActions,
+                download = downloadsByPackage[app.packageName],
+                isUpdatable = app.packageName in updatablePackageNames,
+                isCancellationPending = app.packageName in cancellingPackageNames,
+                onActionClick = { onAppAction(app) },
                 onClick = { onAppClick(app) }
             )
         }

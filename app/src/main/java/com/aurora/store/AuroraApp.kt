@@ -20,7 +20,6 @@ import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
-import com.aurora.extensions.setAppTheme
 import com.aurora.store.data.event.EventFlow
 import com.aurora.store.data.helper.DownloadHelper
 import com.aurora.store.data.helper.UpdateHelper
@@ -28,8 +27,6 @@ import com.aurora.store.data.receiver.PackageManagerReceiver
 import com.aurora.store.util.CommonUtil
 import com.aurora.store.util.NotificationUtil
 import com.aurora.store.util.PackageUtil
-import com.aurora.store.util.Preferences
-import com.google.android.material.color.DynamicColors
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 import kotlinx.coroutines.MainScope
@@ -71,18 +68,6 @@ class AuroraApp : Application(), Configuration.Provider, SingletonImageLoader.Fa
     override fun onCreate() {
         ComposeMaterial3Flags.isCheckboxStylingFixEnabled = true
         super.onCreate()
-        // Set the app theme
-        val themeStyle = Preferences.getInteger(this, Preferences.PREFERENCE_THEME_STYLE)
-        setAppTheme(themeStyle)
-
-        // Apply dynamic colors to activities, unless disabled (opt-out, off by default on One UI)
-        val dynamicColors = Preferences.getBoolean(
-            this,
-            Preferences.PREFERENCE_DYNAMIC_COLORS,
-            Preferences.dynamicColorsDefault
-        )
-        if (dynamicColors) DynamicColors.applyToActivitiesIfAvailable(this)
-
         // Create Notification Channels
         NotificationUtil.createNotificationChannel(this)
 

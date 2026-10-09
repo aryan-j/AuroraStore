@@ -1,17 +1,19 @@
 # Generated Patch Manifest
 
-- Generated: 2026-09-28T09:33:36Z
+- Generated: 2026-10-09T08:43:44Z
 - Baseline commit: e17b1a4a2be9c325dbced6946b5cc91e83c13b02
-- Source HEAD: 32c37ce13ef52d3002dfce39ac65e7883eeb4a3e
-- Files: 79 total (69 modified, 10 added, 0 deleted)
+- Source HEAD: 432d42830a8bd05d92d1c09339abba3e08f50d22
+- Files: 98 total (85 modified, 12 added, 1 deleted)
 - Patch: aurora-expressive-ui.patch
-- Patch SHA-256: 1a948c1d7ff675d7c59257f5fdc037211f2d2eeb68ed125170a7216e2bebebd5
+- Patch SHA-256: e0a0617fc457c54c5129e87351e4aedddfbbeb03d63f9ceec6535250f66c783c
 
 | Status | Path |
 | --- | --- |
 | M | `README.md` |
 | M | `app/build.gradle.kts` |
 | A | `app/src/main/baseline-prof.txt` |
+| D | `app/src/main/java/com/aurora/extensions/ThemeEngine.kt` |
+| M | `app/src/main/java/com/aurora/store/AuroraApp.kt` |
 | M | `app/src/main/java/com/aurora/store/ComposeActivity.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/composable/AccountListItem.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/composable/AuroraListItem.kt` |
@@ -20,6 +22,7 @@
 | A | `app/src/main/java/com/aurora/store/compose/composable/ExpressiveMenu.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/composable/FavouriteListItem.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/composable/Info.kt` |
+| M | `app/src/main/java/com/aurora/store/compose/composable/InstallerListItem.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/composable/MicroG.kt` |
 | A | `app/src/main/java/com/aurora/store/compose/composable/RememberStoreImageRequest.kt` |
 | A | `app/src/main/java/com/aurora/store/compose/composable/RoundedIconButton.kt` |
@@ -31,6 +34,7 @@
 | M | `app/src/main/java/com/aurora/store/compose/composable/TopAppBar.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/composable/app/AnimatedAppIcon.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/composable/app/AppListItem.kt` |
+| A | `app/src/main/java/com/aurora/store/compose/composable/app/AppRatingChip.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/composable/app/AppUpdateItem.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/composable/app/InstalledAppListItem.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/composable/app/LargeAppListItem.kt` |
@@ -41,6 +45,7 @@
 | M | `app/src/main/java/com/aurora/store/compose/navigation/Destination.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/navigation/NavDisplay.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/navigation/Screen.kt` |
+| M | `app/src/main/java/com/aurora/store/compose/theme/Color.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/theme/Theme.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/ui/accounts/AccountsScreen.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/ui/apps/AppsGamesScreen.kt` |
@@ -76,15 +81,29 @@
 | M | `app/src/main/java/com/aurora/store/compose/ui/downloads/menu/DownloadsMenu.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/ui/favourite/menu/FavouriteMenu.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/ui/main/MainScreen.kt` |
+| M | `app/src/main/java/com/aurora/store/compose/ui/preferences/NotificationPreferenceScreen.kt` |
+| A | `app/src/main/java/com/aurora/store/compose/ui/preferences/PreferenceListItem.kt` |
+| M | `app/src/main/java/com/aurora/store/compose/ui/preferences/SettingsScreen.kt` |
+| M | `app/src/main/java/com/aurora/store/compose/ui/preferences/UIPreferenceScreen.kt` |
+| M | `app/src/main/java/com/aurora/store/compose/ui/preferences/installation/InstallationPreferenceScreen.kt` |
+| M | `app/src/main/java/com/aurora/store/compose/ui/preferences/network/NetworkPreferenceScreen.kt` |
+| M | `app/src/main/java/com/aurora/store/compose/ui/preferences/security/SecurityPreferenceScreen.kt` |
+| M | `app/src/main/java/com/aurora/store/compose/ui/preferences/updates/SourceFiltersScreen.kt` |
+| M | `app/src/main/java/com/aurora/store/compose/ui/preferences/updates/UpdatesPreferenceScreen.kt` |
 | A | `app/src/main/java/com/aurora/store/compose/ui/search/SearchMotion.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/ui/search/SearchScreen.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/ui/sheets/AppUpdateSheet.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/ui/sheets/InstallErrorSheet.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/ui/spoof/menu/SpoofMenu.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/ui/updates/UpdatesScreen.kt` |
+| M | `app/src/main/java/com/aurora/store/util/Preferences.kt` |
+| M | `app/src/main/java/com/aurora/store/viewmodel/all/UpdatesViewModel.kt` |
+| M | `app/src/main/java/com/aurora/store/viewmodel/onboarding/OnboardingViewModel.kt` |
 | M | `app/src/main/java/com/aurora/store/viewmodel/search/SearchViewModel.kt` |
 | A | `app/src/main/res/drawable/ic_star_filled.xml` |
+| M | `app/src/main/res/values-night/themes.xml` |
 | M | `app/src/main/res/values/colors.xml` |
 | M | `app/src/main/res/values/dimens.xml` |
 | M | `app/src/main/res/values/strings.xml` |
+| M | `app/src/main/res/values/themes.xml` |
 | M | `gradle/libs.versions.toml` |

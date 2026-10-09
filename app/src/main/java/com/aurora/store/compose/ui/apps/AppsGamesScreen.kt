@@ -46,6 +46,8 @@ import com.aurora.gplayapi.helpers.contracts.StreamContract
 import com.aurora.gplayapi.helpers.contracts.TopChartsContract
 import com.aurora.store.R
 import com.aurora.store.compose.navigation.Destination
+import com.aurora.store.data.room.download.Download
+import com.aurora.gplayapi.data.models.App
 import com.aurora.store.util.Preferences
 import com.aurora.store.viewmodel.category.CategoryViewModel
 import com.aurora.store.viewmodel.homestream.StreamViewModel
@@ -127,6 +129,10 @@ fun AppsGamesScreen(
     streamViewModel: StreamViewModel = hiltViewModel(key = "stream_$pageType"),
     topChartViewModel: TopChartViewModel = hiltViewModel(key = "topChart_$pageType"),
     categoryViewModel: CategoryViewModel = hiltViewModel(key = "category_$pageType"),
+    downloadsByPackage: Map<String, Download> = emptyMap(),
+    cancellingPackageNames: Set<String> = emptySet(),
+    updatablePackageNames: Set<String> = emptySet(),
+    onAppAction: (App) -> Unit = {},
     onNavigateTo: (Destination) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -216,6 +222,10 @@ fun AppsGamesScreen(
                     onClusterScrolled = { cluster ->
                         streamViewModel.observeCluster(category(pageType), cluster)
                     },
+                    downloadsByPackage = downloadsByPackage,
+                    cancellingPackageNames = cancellingPackageNames,
+                    updatablePackageNames = updatablePackageNames,
+                    onAppAction = onAppAction,
                     onScrolledToEnd = {
                         streamViewModel.observe(category(pageType), StreamContract.Type.HOME)
                     },

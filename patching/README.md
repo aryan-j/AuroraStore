@@ -10,7 +10,7 @@ This folder keeps the downstream UI work reproducible against Aurora Store sourc
 - Baseline commit: the full SHA in [`BASE_COMMIT`](BASE_COMMIT)
 - Baseline version inspected: upstream `master` as fetched on 2026-09-27
 
-## Current patch scope — 2026-09-28
+## Current patch scope — 2026-10-09
 
 The current generated patch is the source of truth for this fork. It is primarily a Compose UI and resource redesign, plus the small build/resource changes required to support it. It does not replace Aurora's startup policy, page-retention policy, repositories, data sources, workers, download/install behavior, or backend logic.
 
@@ -21,11 +21,27 @@ The current generated patch is the source of truth for this fork. It is primaril
 
 No changes are made under the app's data, repository, worker, or installer source packages. When Aurora updates those areas without changing a touched UI surface, this patch should remain straightforward to apply. UI or navigation changes in overlapping files still need a targeted port and review.
 
-At inspection time, `HEAD`, `origin/master`, and `upstream/master` all resolved to `e17b1a4a2be9c325dbced6946b5cc91e83c13b02`; the fork and upstream had no commit divergence. The current UI work is a local working-tree delta on that commit; there is not yet a UI commit on the fork's `master`. The manifest and patch capture the modified working tree, including new files and assets.
+The UI work is maintained on the fork branch `codex/material-3-expressive-ui-proposal`; the manifest and patch capture its complete source delta, including new files and assets. The recorded patch baseline remains `e17b1a4a2be9c325dbced6946b5cc91e83c13b02`.
 
 The original code uses a primary tab row for Apps/Games sections and a secondary tab row for chart filters. Its details screen has the original vertically arranged app information and action components. The existing app already uses `MaterialExpressiveTheme`; this patch adds the expressive motion scheme, revised screen layouts and native expressive components across those existing Compose surfaces. Typography uses Material 3's default `FontFamily.Default` system sans, matching the original app.
 
 The modified app was inspected on the paired Android device. The Apps screen now keeps For You, Top Charts, and Categories in one page with the chart choices shown in context and a floating bottom navigation/search bar. The details screen uses the redesigned app header, metrics carousel, action group, screenshot carousel, review card, and clearer portals into more information and reviews. The details overflow menu was also inspected after constraining its leading icons to the standard 24dp size.
+
+## Home actions and settings follow-up — 2026-10-09
+
+- Home-card Install now resolves the complete app model through the existing `AppDetailsHelper` before passing it to the existing `DownloadHelper`. This avoids enqueuing partial discovery metadata while leaving download workers, installer behavior, and backend services unchanged. If details cannot be loaded, the existing app-details route is used as the fallback.
+- Home-card actions now read the latest download/update state when clicked, including from retained pager pages. This prevents a stale Install callback from re-enqueueing an app after the visible action has changed to Cancel. The cancelable states match the details page: queued, purchasing, and downloading. Verification and installation remain non-cancelable in the home UI, as on the details page.
+- The home action progress and button states still use Aurora's existing download row and icon animation. The bottom metrics stay aligned across cards with one- and two-line titles; the rating chip comes first, followed by the download count with a small gap.
+- The Settings root now uses the current state-based Material 3 full-screen search bar. Its category links use expressive segmented list items; child preference screens use inset Material 3 list rows, shared surfaces, and consistent spacing. Account and installer choices retain their existing behavior with matching M3 list styling.
+- On-device verification confirmed a home-card install was enqueued and completed, then the temporary app was uninstalled. A second in-progress home download was canceled; the DownloadHelper log recorded its cancellation and the card returned to Install. The settings search and a child settings screen were inspected in dark mode.
+
+These changes touch Compose UI and its view-model action adapter only. They do not modify the download helper, database, worker, installer, or network API implementation.
+
+## Upstream release check — 2026-10-09
+
+- Aurora Store's latest official GitLab release remains 4.8.4 (version code 76), published July 27, 2026: <https://gitlab.com/AuroraOSS/AuroraStore/-/releases/4.8.4>. This matches the app version and code in the patch baseline, so there is no newer official release to port.
+- Upstream GitHub `master` has advanced to `3a15ff676af9badb3cdf0bbb54b451383918cd6b` (October 2, 2026) with Weblate translation commits. The patch applied cleanly to a clean checkout of that commit; no source update was adopted because it is not a new app release.
+- The patch baseline remains `e17b1a4a2be9c325dbced6946b5cc91e83c13b02`; `apply-patch.sh` accepts descendants such as the current upstream `master` and fails safely on overlapping edits.
 
 ## Change map
 
@@ -98,6 +114,8 @@ If Aurora changes a screen's UI or navigation structure, the patch may need targ
 - `:app:assembleDebug` succeeded for this working tree.
 - `git diff --check` passed.
 - The exporter-generated manifest records the exact patch file inventory.
+- The 2026-10-09 home-action/settings follow-up compiled with `:app:assembleVanillaDebug`, installed on the paired Nothing Phone (2), and was checked on-device in the home, settings search, and Security preferences screens.
+- Device actions confirmed the discovery-card install path and cancellation behavior. No test download is active; the latest Vanilla Debug build remains installed for review.
 
 ## UI performance follow-up — 2026-09-27
 
@@ -251,3 +269,18 @@ The later responsiveness follow-up had temporarily gated Categories and paginati
 - Kept the metrics pills immediately available. They use local vector icons and cached text/layout data, with no network image work or continuous animation to stagger. Added stable metric keys and a shared content type so list recompositions can reuse item compositions.
 - Restored the version as a metric pill using Aurora's existing version fields and installed-version helper. It shows the installed version name, or the installed-to-available pair when an update is available. No package/version discovery or backend logic was changed; the display lookup is keyed to the package and update state and runs on the IO dispatcher.
 - `:app:assembleVanillaNightly` succeeded; the signed APK was installed over the Nightly package and opened for on-device comparison.
+
+## System expressive theme and home-card actions — 2026-10-09
+
+- Removed the in-app light/dark selector and dynamic-color switch. `MaterialExpressiveTheme` follows Android's system night mode and wallpaper palette automatically through Compose's dynamic light/dark schemes on Android 12+, with expressive light and standard dark fallback schemes on older versions. Removed the DynamicColors overlay from the native theme resources as well; there are no in-app appearance controls.
+- The main screen now paints its background from the active Material color scheme. Shared stream section headings explicitly use `onSurface`, fixing low-contrast titles such as “Apps made in Australia”, “Popular apps”, and “Make new connections” in dark mode.
+- For You home cards now place an Install/Open/Update action where the rating badge was, move rating alongside the install count at the bottom, and reuse the existing animated app icon and download states. Home-action cards use a shared 200dp height and a weighted spacer so the metrics stay on the same bottom row even when titles wrap differently; the rating chip comes first, followed by the download count with a small gap. The full-width home list uses the same action. Other browse and details cards keep their prior rating/download treatment and do not show a no-op action.
+- The home action routes free downloads and cancellation through Aurora's existing download helper, updates through the existing update path, installed apps to their launch intent, and paid/permission/MicroG cases through the existing details or permission flow. No repository, worker, installer, or backend behavior was changed.
+- `:app:assembleDebug` succeeded. The Vanilla Debug APK was installed and inspected on the Nothing Phone (2) in both Android system light and dark modes; section-title contrast and home card action placement were confirmed. System night mode was restored to its original light setting after the check.
+
+## Settings spacing and gutters — 2026-10-09
+
+- Kept Material 3 surface backgrounds on the Settings root and preference rows, matching the supplied stock Android Settings reference. Each grouped list uses the app-wide 28dp outer radius on its first and last rows; middle rows stay square, with 4dp row gaps and 16dp page gutters.
+- The shared settings row uses official Material 3 Expressive `SegmentedListItem` and `ListItemDefaults.ContentPadding`, with trailing controls explicitly centered vertically even when supporting text makes a row taller. Standalone preferences use the same surface and radius as one-row groups. There is no complete Compose Settings page component in AndroidX; the AndroidX Preference screen API is View-based, so these native Compose list components are the Compose equivalent.
+- The Settings root now places its heading above the full-width Material 3 SearchBar and uses the shared padded top app bar. Search still expands to the full-screen search UI and focuses the keyboard immediately. Settings search results use the same grouped Material 3 list treatment. Controls, destinations, preference values, and search behavior are unchanged.
+- `:app:assembleVanillaDebug` succeeded and the APK was installed on the Nothing Phone (2). Dark-mode inspection covered the Settings root, full-screen search results, and vertically centered Security switches against the supplied stock Android Settings references. Home card metrics were inspected with one-line and two-line titles.

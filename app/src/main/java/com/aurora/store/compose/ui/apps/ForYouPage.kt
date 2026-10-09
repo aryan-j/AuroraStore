@@ -18,6 +18,7 @@ import com.aurora.gplayapi.helpers.contracts.StreamContract
 import com.aurora.store.HomeStash
 import com.aurora.store.compose.composable.StreamCarousel
 import com.aurora.store.data.model.ViewState
+import com.aurora.store.data.room.download.Download
 import com.aurora.store.viewmodel.homestream.StreamViewModel
 
 @Composable
@@ -28,6 +29,10 @@ internal fun ForYouContent(
     onHeaderClick: (StreamCluster) -> Unit,
     onClusterScrolled: (StreamCluster) -> Unit,
     onScrolledToEnd: () -> Unit,
+    downloadsByPackage: Map<String, Download> = emptyMap(),
+    cancellingPackageNames: Set<String> = emptySet(),
+    updatablePackageNames: Set<String> = emptySet(),
+    onAppAction: (App) -> Unit = {},
     bottomContentPadding: Dp
 ) {
     val category = category(pageType)
@@ -43,8 +48,13 @@ internal fun ForYouContent(
         modifier = Modifier.fillMaxSize(),
         streamBundle = streamBundle?.get(category),
         bottomContentPadding = bottomContentPadding,
+        showHomeActions = true,
+        downloadsByPackage = downloadsByPackage,
+        cancellingPackageNames = cancellingPackageNames,
+        updatablePackageNames = updatablePackageNames,
         onHeaderClick = onHeaderClick,
         onAppClick = onAppClick,
+        onAppAction = onAppAction,
         onClusterScrolled = onClusterScrolled,
         onScrolledToEnd = onScrolledToEnd
     )

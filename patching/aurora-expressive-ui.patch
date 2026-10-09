@@ -44,6 +44,68 @@ index 0000000000000000000000000000000000000000..9e4d128e814ae27599d23784b6b0ef19
 +HPLcom/aurora/store/compose/ui/details/AppDetailsScreenKt;->**(**)**
 +HPLcom/aurora/store/compose/ui/details/composable/DetailsKt;->**(**)**
 +HPLcom/aurora/store/compose/ui/details/composable/ScreenshotsKt;->**(**)**
+diff --git a/app/src/main/java/com/aurora/extensions/ThemeEngine.kt b/app/src/main/java/com/aurora/extensions/ThemeEngine.kt
+deleted file mode 100644
+index 8acdbe9e855d4d0d8c7fcb5481dc61f8180d1798..0000000000000000000000000000000000000000
+--- a/app/src/main/java/com/aurora/extensions/ThemeEngine.kt
++++ /dev/null
+@@ -1,16 +0,0 @@
+-/*
+- * SPDX-FileCopyrightText: 2021 Aurora OSS
+- * SPDX-License-Identifier: GPL-3.0-or-later
+- */
+-
+-package com.aurora.extensions
+-
+-import androidx.appcompat.app.AppCompatDelegate
+-
+-fun setAppTheme(themeStyle: Int) {
+-    when (themeStyle) {
+-        1 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+-        2 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+-        else -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+-    }
+-}
+diff --git a/app/src/main/java/com/aurora/store/AuroraApp.kt b/app/src/main/java/com/aurora/store/AuroraApp.kt
+index 357cbdbdac0cce42cd0ad543a0624aaac8fa073f..5228afae82f25cbec782dc3a2da95c1b616bdf36 100644
+--- a/app/src/main/java/com/aurora/store/AuroraApp.kt
++++ b/app/src/main/java/com/aurora/store/AuroraApp.kt
+@@ -20,7 +20,6 @@ import coil3.ImageLoader
+ import coil3.SingletonImageLoader
+ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+ import coil3.request.crossfade
+-import com.aurora.extensions.setAppTheme
+ import com.aurora.store.data.event.EventFlow
+ import com.aurora.store.data.helper.DownloadHelper
+ import com.aurora.store.data.helper.UpdateHelper
+@@ -28,8 +27,6 @@ import com.aurora.store.data.receiver.PackageManagerReceiver
+ import com.aurora.store.util.CommonUtil
+ import com.aurora.store.util.NotificationUtil
+ import com.aurora.store.util.PackageUtil
+-import com.aurora.store.util.Preferences
+-import com.google.android.material.color.DynamicColors
+ import dagger.hilt.android.HiltAndroidApp
+ import javax.inject.Inject
+ import kotlinx.coroutines.MainScope
+@@ -71,18 +68,6 @@ class AuroraApp : Application(), Configuration.Provider, SingletonImageLoader.Fa
+     override fun onCreate() {
+         ComposeMaterial3Flags.isCheckboxStylingFixEnabled = true
+         super.onCreate()
+-        // Set the app theme
+-        val themeStyle = Preferences.getInteger(this, Preferences.PREFERENCE_THEME_STYLE)
+-        setAppTheme(themeStyle)
+-
+-        // Apply dynamic colors to activities, unless disabled (opt-out, off by default on One UI)
+-        val dynamicColors = Preferences.getBoolean(
+-            this,
+-            Preferences.PREFERENCE_DYNAMIC_COLORS,
+-            Preferences.dynamicColorsDefault
+-        )
+-        if (dynamicColors) DynamicColors.applyToActivitiesIfAvailable(this)
+-
+         // Create Notification Channels
+         NotificationUtil.createNotificationChannel(this)
+ 
 diff --git a/app/src/main/java/com/aurora/store/ComposeActivity.kt b/app/src/main/java/com/aurora/store/ComposeActivity.kt
 index cfd7976a377381d3a150db7dfa469107e03f3593..9dc77f4481925d6f3ef00e0fdeb4b31abda847a2 100644
 --- a/app/src/main/java/com/aurora/store/ComposeActivity.kt
@@ -90,10 +152,10 @@ index cfd7976a377381d3a150db7dfa469107e03f3593..9dc77f4481925d6f3ef00e0fdeb4b31a
          AppLockAuthenticator.authenticate(
              activity = this,
 diff --git a/app/src/main/java/com/aurora/store/compose/composable/AccountListItem.kt b/app/src/main/java/com/aurora/store/compose/composable/AccountListItem.kt
-index 6eadf87317aad71d53b2ec007e80d0b3db85d343..b4841ed00d45b2398076809e3c933da2dad3512b 100644
+index 6eadf87317aad71d53b2ec007e80d0b3db85d343..ef7446478a1e2cb3e9321fdaef6190909472c6d2 100644
 --- a/app/src/main/java/com/aurora/store/compose/composable/AccountListItem.kt
 +++ b/app/src/main/java/com/aurora/store/compose/composable/AccountListItem.kt
-@@ -6,18 +6,11 @@
+@@ -6,18 +6,13 @@
  package com.aurora.store.compose.composable
  
  import androidx.compose.foundation.background
@@ -107,21 +169,25 @@ index 6eadf87317aad71d53b2ec007e80d0b3db85d343..b4841ed00d45b2398076809e3c933da2
  import androidx.compose.foundation.shape.CircleShape
 -import androidx.compose.material3.MaterialTheme
 -import androidx.compose.material3.Text
++import androidx.compose.foundation.shape.RoundedCornerShape
  import androidx.compose.runtime.Composable
 -import androidx.compose.ui.Alignment
 +import androidx.compose.material3.Text
++import androidx.compose.material3.MaterialTheme
  import androidx.compose.ui.Modifier
  import androidx.compose.ui.draw.clip
  import androidx.compose.ui.layout.ContentScale
-@@ -33,62 +26,50 @@ import com.aurora.store.data.room.account.Account
+@@ -33,62 +28,57 @@ import com.aurora.store.data.room.account.Account
  
  @Composable
  fun AccountListItem(account: Account, onClick: () -> Unit, modifier: Modifier = Modifier) {
 -    Row(
--        modifier = modifier
++    val itemShape = RoundedCornerShape(dimensionResource(R.dimen.radius_large))
++    AuroraListItem(
+         modifier = modifier
 -            .fillMaxWidth()
 -            .clickable(onClick = onClick)
--            .padding(
+             .padding(
 -                horizontal = dimensionResource(R.dimen.spacing_medium),
 -                vertical = dimensionResource(R.dimen.spacing_medium)
 -            ),
@@ -158,15 +224,17 @@ index 6eadf87317aad71d53b2ec007e80d0b3db85d343..b4841ed00d45b2398076809e3c933da2
 -                color = MaterialTheme.colorScheme.onSurfaceVariant,
 -                maxLines = 1,
 -                overflow = TextOverflow.Ellipsis
--            )
++                horizontal = dimensionResource(R.dimen.spacing_large),
++                vertical = dimensionResource(R.dimen.spacing_xsmall)
+             )
 -        }
 -        if (account.isDefault) {
 -            Text(
 -                text = stringResource(R.string.account_default),
 -                style = MaterialTheme.typography.labelSmall,
 -                color = MaterialTheme.colorScheme.onSecondaryContainer,
-+    AuroraListItem(
-+        modifier = modifier,
++            .clip(itemShape)
++            .background(MaterialTheme.colorScheme.surfaceContainerLow, itemShape),
 +        headline = if (account.isAnonymous) {
 +            stringResource(R.string.account_anonymous)
 +        } else {
@@ -882,6 +950,44 @@ index 448d6d96a487b05107bfb82fe2af36a0cc597889..a62fc0b2f1dca7e1030645267e07e1f5
          }
      }
  }
+diff --git a/app/src/main/java/com/aurora/store/compose/composable/InstallerListItem.kt b/app/src/main/java/com/aurora/store/compose/composable/InstallerListItem.kt
+index ce925ef1edfece06642c79f1c22b4481a09b7625..e7ba8f52af895b76c6ae64f27ab0ca8aacbd9273 100644
+--- a/app/src/main/java/com/aurora/store/compose/composable/InstallerListItem.kt
++++ b/app/src/main/java/com/aurora/store/compose/composable/InstallerListItem.kt
+@@ -5,9 +5,15 @@
+ 
+ package com.aurora.store.compose.composable
+ 
++import androidx.compose.foundation.background
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.RadioButton
+ import androidx.compose.runtime.Composable
+ import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.clip
++import androidx.compose.ui.res.dimensionResource
+ import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.tooling.preview.PreviewWrapper
+@@ -24,9 +30,16 @@ fun InstallerListItem(
+     onClick: () -> Unit = {}
+ ) {
+     val description = stringResource(installerInfo.description)
++    val itemShape = RoundedCornerShape(dimensionResource(R.dimen.radius_large))
+ 
+     AuroraListItem(
+-        modifier = modifier,
++        modifier = modifier
++            .padding(
++                horizontal = dimensionResource(R.dimen.spacing_large),
++                vertical = dimensionResource(R.dimen.spacing_xsmall)
++            )
++            .clip(itemShape)
++            .background(MaterialTheme.colorScheme.surfaceContainerLow, itemShape),
+         headline = stringResource(installerInfo.title),
+         supporting = stringResource(installerInfo.subtitle),
+         // Name the app providing this installer, where several can serve the same one
 diff --git a/app/src/main/java/com/aurora/store/compose/composable/MicroG.kt b/app/src/main/java/com/aurora/store/compose/composable/MicroG.kt
 index 188efd7cb34d796b2fb480c59e81ef6aab081847..7b9432cde2f2c3e08b54ffeb3bea3af30cd72a78 100644
 --- a/app/src/main/java/com/aurora/store/compose/composable/MicroG.kt
@@ -1208,7 +1314,7 @@ index 959b07ea62016de29a6a3b224839ed010c705e10..b03af9e73757fe2386be4b81c4648ca4
  
  @PreviewWrapper(ThemePreviewProvider::class)
 diff --git a/app/src/main/java/com/aurora/store/compose/composable/SectionHeader.kt b/app/src/main/java/com/aurora/store/compose/composable/SectionHeader.kt
-index 9957c1d7b44262448ea2f944ff26422267b77ef9..e6f90e2bb9def7d5183ae9c39d22d9ad14ef8679 100644
+index 9957c1d7b44262448ea2f944ff26422267b77ef9..c2626d922ea501ff6e53cb8d27e9c7c349226899 100644
 --- a/app/src/main/java/com/aurora/store/compose/composable/SectionHeader.kt
 +++ b/app/src/main/java/com/aurora/store/compose/composable/SectionHeader.kt
 @@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Row
@@ -1246,7 +1352,15 @@ index 9957c1d7b44262448ea2f944ff26422267b77ef9..e6f90e2bb9def7d5183ae9c39d22d9ad
                  vertical = dimensionResource(R.dimen.spacing_xsmall)
              ),
          horizontalArrangement = Arrangement.SpaceBetween,
-@@ -71,11 +73,11 @@ fun SectionHeader(
+@@ -56,6 +58,7 @@ fun SectionHeader(
+             Text(
+                 text = title,
+                 style = MaterialTheme.typography.titleMedium,
++                color = MaterialTheme.colorScheme.onSurface,
+                 maxLines = 1,
+                 overflow = TextOverflow.Ellipsis
+             )
+@@ -71,11 +74,11 @@ fun SectionHeader(
          }
          when {
              trailing != null -> trailing()
@@ -1495,7 +1609,7 @@ index e604b78f004ac8c21d391871d85e04f82063ed23..b0655b5658ec5c92f38f2a809b9adf85
  
  @PreviewWrapper(ThemePreviewProvider::class)
 diff --git a/app/src/main/java/com/aurora/store/compose/composable/StreamCarousel.kt b/app/src/main/java/com/aurora/store/compose/composable/StreamCarousel.kt
-index 6656090ff11bf6c208f36afac157c0e471e85f8e..7ec80eaf3f39d430540d86372f843723aacea954 100644
+index 6656090ff11bf6c208f36afac157c0e471e85f8e..8acb8fead75becd6afc44de062fac4ddf3cc519c 100644
 --- a/app/src/main/java/com/aurora/store/compose/composable/StreamCarousel.kt
 +++ b/app/src/main/java/com/aurora/store/compose/composable/StreamCarousel.kt
 @@ -8,11 +8,13 @@ package com.aurora.store.compose.composable
@@ -1521,15 +1635,32 @@ index 6656090ff11bf6c208f36afac157c0e471e85f8e..7ec80eaf3f39d430540d86372f843723
  import androidx.compose.ui.res.dimensionResource
  import androidx.compose.ui.res.painterResource
  import androidx.compose.ui.res.stringResource
-@@ -40,6 +44,7 @@ private const val LOAD_MORE_THRESHOLD = 2
+@@ -32,6 +36,7 @@ import com.aurora.store.R
+ import com.aurora.store.compose.composable.app.AppListItem
+ import com.aurora.store.compose.composable.app.LargeAppListItem
+ import com.aurora.store.compose.preview.ThemePreviewProvider
++import com.aurora.store.data.room.download.Download
+ import kotlinx.coroutines.flow.distinctUntilChanged
+ 
+ private const val LOAD_MORE_THRESHOLD = 2
+@@ -40,10 +45,16 @@ private const val LOAD_MORE_THRESHOLD = 2
  fun StreamCarousel(
      modifier: Modifier = Modifier,
      streamBundle: StreamBundle?,
 +    bottomContentPadding: Dp = 0.dp,
++    showHomeActions: Boolean = false,
++    downloadsByPackage: Map<String, Download> = emptyMap(),
++    cancellingPackageNames: Set<String> = emptySet(),
++    updatablePackageNames: Set<String> = emptySet(),
      filterSingleAppClusters: Boolean = true,
      lazyListState: LazyListState = rememberLazyListState(),
      onHeaderClick: (StreamCluster) -> Unit = {},
-@@ -59,24 +64,28 @@ fun StreamCarousel(
+     onAppClick: (App) -> Unit = {},
++    onAppAction: (App) -> Unit = {},
+     onClusterScrolled: (StreamCluster) -> Unit = {},
+     onScrolledToEnd: () -> Unit = {}
+ ) {
+@@ -59,24 +70,28 @@ fun StreamCarousel(
      }
  
      if (streamBundle == null) {
@@ -1567,7 +1698,7 @@ index 6656090ff11bf6c208f36afac157c0e471e85f8e..7ec80eaf3f39d430540d86372f843723
          }
  
      if (clusters.isEmpty()) {
-@@ -91,21 +100,22 @@ fun StreamCarousel(
+@@ -91,21 +106,27 @@ fun StreamCarousel(
      LazyColumn(
          modifier = modifier.fillMaxSize(),
          state = lazyListState,
@@ -1594,14 +1725,38 @@ index 6656090ff11bf6c208f36afac157c0e471e85f8e..7ec80eaf3f39d430540d86372f843723
                      app = apps[index],
 +                    itemIndex = index,
 +                    itemCount = apps.size,
++                    showHomeAction = showHomeActions,
++                    download = downloadsByPackage[apps[index].packageName],
++                    isUpdatable = apps[index].packageName in updatablePackageNames,
++                    isCancellationPending = apps[index].packageName in cancellingPackageNames,
++                    onActionClick = { onAppAction(apps[index]) },
                      onClick = { onAppClick(apps[index]) }
                  )
              }
-@@ -141,8 +151,11 @@ fun StreamCarousel(
+@@ -124,7 +145,12 @@ fun StreamCarousel(
+                 item(key = "row_${cluster.id}") {
+                     ClusterRow(
+                         cluster = cluster,
++                        showHomeActions = showHomeActions,
++                        downloadsByPackage = downloadsByPackage,
++                        cancellingPackageNames = cancellingPackageNames,
++                        updatablePackageNames = updatablePackageNames,
+                         onAppClick = onAppClick,
++                        onAppAction = onAppAction,
+                         onClusterScrolled = onClusterScrolled
+                     )
+                 }
+@@ -140,9 +166,17 @@ fun StreamCarousel(
+ @Composable
  internal fun ClusterRow(
      cluster: StreamCluster,
++    showHomeActions: Boolean = false,
++    downloadsByPackage: Map<String, Download> = emptyMap(),
++    cancellingPackageNames: Set<String> = emptySet(),
++    updatablePackageNames: Set<String> = emptySet(),
      onAppClick: (App) -> Unit = {},
 -    onClusterScrolled: (StreamCluster) -> Unit = {}
++    onAppAction: (App) -> Unit = {},
 +    onClusterScrolled: (StreamCluster) -> Unit = {},
 +    horizontalContentPadding: Dp? = null
  ) {
@@ -1610,7 +1765,7 @@ index 6656090ff11bf6c208f36afac157c0e471e85f8e..7ec80eaf3f39d430540d86372f843723
      val rowState = rememberLazyListState()
      val reachedEnd by remember {
          derivedStateOf {
-@@ -158,7 +171,7 @@ internal fun ClusterRow(
+@@ -158,7 +192,7 @@ internal fun ClusterRow(
  
      LazyRow(
          state = rowState,
@@ -1619,6 +1774,18 @@ index 6656090ff11bf6c208f36afac157c0e471e85f8e..7ec80eaf3f39d430540d86372f843723
          horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.spacing_small))
      ) {
          itemsIndexed(
+@@ -167,6 +201,11 @@ internal fun ClusterRow(
+         ) { _, app ->
+             AppListItem(
+                 app = app,
++                showHomeAction = showHomeActions,
++                download = downloadsByPackage[app.packageName],
++                isUpdatable = app.packageName in updatablePackageNames,
++                isCancellationPending = app.packageName in cancellingPackageNames,
++                onActionClick = { onAppAction(app) },
+                 onClick = { onAppClick(app) }
+             )
+         }
 diff --git a/app/src/main/java/com/aurora/store/compose/composable/TopAppBar.kt b/app/src/main/java/com/aurora/store/compose/composable/TopAppBar.kt
 index 3f9ab47133e4f085d5766cf91f1c3a65e26b5e54..d2ed6f5d4df442b7fcf5ecda793c3c78e9dffd3d 100644
 --- a/app/src/main/java/com/aurora/store/compose/composable/TopAppBar.kt
@@ -1759,42 +1926,49 @@ index f75de3896e0a7a0242232be344e1aef082ecd10e..2917606a9855f254eff2e269a189d047
              contentScale = ContentScale.Crop,
              modifier = Modifier
 diff --git a/app/src/main/java/com/aurora/store/compose/composable/app/AppListItem.kt b/app/src/main/java/com/aurora/store/compose/composable/app/AppListItem.kt
-index 2d1e75c64df69fe1ba6b81820734f64b1bd11ddf..ce0289e04abac187f24e45e7f7e2da18f22c05f5 100644
+index 2d1e75c64df69fe1ba6b81820734f64b1bd11ddf..5139c17c16372148e34695cba67626d0653ffc4b 100644
 --- a/app/src/main/java/com/aurora/store/compose/composable/app/AppListItem.kt
 +++ b/app/src/main/java/com/aurora/store/compose/composable/app/AppListItem.kt
-@@ -5,14 +5,21 @@
+@@ -5,78 +5,242 @@
  
  package com.aurora.store.compose.composable.app
  
 -import androidx.compose.foundation.clickable
-+import androidx.compose.foundation.background
  import androidx.compose.foundation.layout.Arrangement
  import androidx.compose.foundation.layout.Column
 -import androidx.compose.foundation.layout.aspectRatio
--import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.PaddingValues
 +import androidx.compose.foundation.layout.Row
 +import androidx.compose.foundation.layout.Spacer
+ import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
 +import androidx.compose.foundation.layout.heightIn
  import androidx.compose.foundation.layout.padding
 +import androidx.compose.foundation.layout.requiredSize
 +import androidx.compose.foundation.layout.size
  import androidx.compose.foundation.layout.width
-+import androidx.compose.foundation.shape.CircleShape
  import androidx.compose.foundation.shape.RoundedCornerShape
-+import androidx.compose.material3.CardDefaults
 +import androidx.compose.material3.Card
++import androidx.compose.material3.CardDefaults
++import androidx.compose.material3.FilledTonalButton
 +import androidx.compose.material3.Icon
  import androidx.compose.material3.MaterialTheme
  import androidx.compose.material3.Text
  import androidx.compose.runtime.Composable
-@@ -20,63 +27,96 @@ import androidx.compose.ui.Alignment
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
+ import androidx.compose.ui.Alignment
  import androidx.compose.ui.Modifier
  import androidx.compose.ui.draw.clip
  import androidx.compose.ui.layout.ContentScale
--import androidx.compose.ui.platform.LocalContext
+ import androidx.compose.ui.platform.LocalContext
  import androidx.compose.ui.res.dimensionResource
 -import androidx.compose.ui.text.style.TextAlign
 +import androidx.compose.ui.res.painterResource
++import androidx.compose.ui.res.stringResource
  import androidx.compose.ui.text.style.TextOverflow
  import androidx.compose.ui.tooling.preview.Preview
  import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -1805,22 +1979,95 @@ index 2d1e75c64df69fe1ba6b81820734f64b1bd11ddf..ce0289e04abac187f24e45e7f7e2da18
 -import coil3.request.crossfade
  import com.aurora.gplayapi.data.models.App
  import com.aurora.store.R
-+import com.aurora.store.compose.composable.rememberStoreImageRequest
  import com.aurora.store.compose.preview.AppPreviewProvider
  import com.aurora.store.compose.preview.ThemePreviewProvider
++import com.aurora.store.compose.composable.rememberStoreImageRequest
++import com.aurora.store.data.model.DownloadStatus
++import com.aurora.store.data.room.download.Download
++import com.aurora.store.util.CommonUtil
++import com.aurora.store.util.PackageUtil
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.withContext
  
- /**
+-/**
 - * Composable for displaying minimal app details in a horizontal-scrollable list
 - * @param modifier The modifier to be applied to the composable
 - * @param app [App] to display
 - * @param onClick Callback when the composable is clicked
 - * @see LargeAppListItem
-+ * Compact store card for app discovery carousels. The card remains one tap target and keeps the
-+ * same app-details navigation callback as the previous icon tile.
-  */
+- */
++private val cancellableDownloadStates = setOf(
++    DownloadStatus.QUEUED,
++    DownloadStatus.PURCHASING,
++    DownloadStatus.DOWNLOADING
++)
++
++private val installingDownloadStates = setOf(
++    DownloadStatus.COMPLETED,
++    DownloadStatus.VERIFYING,
++    DownloadStatus.AWAITING_INSTALL,
++    DownloadStatus.INSTALLING
++)
++
++private val animatedDownloadStates = cancellableDownloadStates + installingDownloadStates
++
++/** Compact store card used in home discovery carousels. */
  @Composable
- fun AppListItem(modifier: Modifier = Modifier, app: App, onClick: () -> Unit = {}) {
+-fun AppListItem(modifier: Modifier = Modifier, app: App, onClick: () -> Unit = {}) {
 -    Column(
++fun AppListItem(
++    modifier: Modifier = Modifier,
++    app: App,
++    showHomeAction: Boolean = false,
++    download: Download? = null,
++    isUpdatable: Boolean = false,
++    isCancellationPending: Boolean = false,
++    onActionClick: () -> Unit = {},
++    onClick: () -> Unit = {}
++) {
++    val context = LocalContext.current
++    var isInstalled by remember(app.packageName) { mutableStateOf(app.isInstalled) }
++    LaunchedEffect(app.packageName, showHomeAction) {
++        if (showHomeAction) {
++            isInstalled = withContext(Dispatchers.IO) {
++                PackageUtil.isInstalled(context, app.packageName)
++            }
++        }
++    }
++    LaunchedEffect(download?.status, showHomeAction) {
++        if (showHomeAction && download?.status == DownloadStatus.INSTALLED) {
++            isInstalled = true
++        }
++    }
++
++    val canOpen = remember(showHomeAction, app.packageName, isInstalled) {
++        showHomeAction && isInstalled && PackageUtil.getLaunchIntent(context, app.packageName) != null
++    }
++    val status = if (showHomeAction) download?.status else null
++    val isCancellable = status != null && status in cancellableDownloadStates
++    val isInstalling = status != null && status in installingDownloadStates
++    val isAnimated = status != null && status in animatedDownloadStates
++    val actionLabel = when {
++        isCancellationPending -> R.string.action_cancel
++        isCancellable -> R.string.action_cancel
++        isInstalling -> R.string.action_installing
++        isUpdatable -> R.string.action_update
++        isInstalled -> R.string.action_open
++        app.isFree -> R.string.action_install
++        else -> null
++    }
++    val isActionEnabled = when {
++        isCancellationPending || isInstalling -> false
++        isCancellable || isUpdatable -> true
++        isInstalled -> canOpen
++        else -> true
++    }
++    val installCount = remember(app.installs, app.downloadString) {
++        CommonUtil.addDiPrefix(app.installs)
++            ?: app.downloadString.takeIf(String::isNotBlank)
++    }
++    val rating = app.labeledRating.takeUnless { it.isBlank() || it == "0.0" }
++
 +    Card(
          modifier = modifier
 -            .width(dimensionResource(R.dimen.icon_size_cluster))
@@ -1831,7 +2078,13 @@ index 2d1e75c64df69fe1ba6b81820734f64b1bd11ddf..ce0289e04abac187f24e45e7f7e2da18
 -            dimensionResource(R.dimen.spacing_xsmall),
 -            Alignment.CenterVertically
 +            .width(164.dp)
-+            .heightIn(min = 184.dp),
++            .then(
++                if (showHomeAction) {
++                    Modifier.height(200.dp)
++                } else {
++                    Modifier.heightIn(min = 184.dp)
++                }
++            ),
 +        onClick = onClick,
 +        shape = MaterialTheme.shapes.extraLarge,
 +        colors = CardDefaults.cardColors(
@@ -1854,34 +2107,42 @@ index 2d1e75c64df69fe1ba6b81820734f64b1bd11ddf..ce0289e04abac187f24e45e7f7e2da18
 +            verticalArrangement = Arrangement.spacedBy(8.dp)
 +        ) {
 +            Row(verticalAlignment = Alignment.CenterVertically) {
-+                AsyncImage(
-+                    modifier = Modifier
-+                        .requiredSize(56.dp)
-+                        .clip(RoundedCornerShape(dimensionResource(R.dimen.app_icon_radius))),
-+                    model = rememberStoreImageRequest(app.iconArtwork.url),
-+                    contentDescription = null,
-+                    contentScale = ContentScale.Crop
-+                )
-+                Spacer(Modifier.weight(1f))
-+                Row(
-+                    modifier = Modifier
-+                        .clip(CircleShape)
-+                        .background(MaterialTheme.colorScheme.secondaryContainer)
-+                        .padding(horizontal = 8.dp, vertical = 5.dp),
-+                    verticalAlignment = Alignment.CenterVertically
-+                ) {
-+                    Icon(
-+                        painter = painterResource(R.drawable.ic_star),
++                if (showHomeAction) {
++                    AnimatedAppIcon(
++                        modifier = Modifier.requiredSize(56.dp),
++                        iconUrl = app.iconArtwork.url,
++                        inProgress = isAnimated,
++                        progress = if (status == DownloadStatus.DOWNLOADING) {
++                            download?.progress?.toFloat() ?: 0F
++                        } else {
++                            0F
++                        }
++                    )
++                } else {
++                    AsyncImage(
++                        modifier = Modifier
++                            .requiredSize(56.dp)
++                            .clip(RoundedCornerShape(dimensionResource(R.dimen.app_icon_radius))),
++                        model = rememberStoreImageRequest(app.iconArtwork.url),
 +                        contentDescription = null,
-+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-+                        modifier = Modifier.size(14.dp)
++                        contentScale = ContentScale.Crop
 +                    )
-+                    Spacer(Modifier.width(3.dp))
-+                    Text(
-+                        text = app.labeledRating.ifBlank { "—" },
-+                        style = MaterialTheme.typography.labelSmall,
-+                        color = MaterialTheme.colorScheme.onSecondaryContainer
-+                    )
++                }
++                Spacer(Modifier.weight(1f))
++                if (showHomeAction) {
++                    FilledTonalButton(
++                        onClick = onActionClick,
++                        enabled = isActionEnabled,
++                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
++                    ) {
++                        Text(
++                            text = actionLabel?.let { stringResource(it) } ?: app.price,
++                            style = MaterialTheme.typography.labelSmall,
++                            maxLines = 1
++                        )
++                    }
++                } else {
++                    AppRatingChip(rating = app.labeledRating.ifBlank { "—" })
 +                }
 +            }
  
@@ -1911,7 +2172,38 @@ index 2d1e75c64df69fe1ba6b81820734f64b1bd11ddf..ce0289e04abac187f24e45e7f7e2da18
 +                )
 +            }
 +
-+            if (app.downloadString.isNotBlank()) {
++            if (showHomeAction && (installCount != null || rating != null)) {
++                Spacer(Modifier.weight(1f))
++                Row(
++                    modifier = Modifier.fillMaxWidth(),
++                    horizontalArrangement = Arrangement.spacedBy(
++                        dimensionResource(R.dimen.spacing_small)
++                    ),
++                    verticalAlignment = Alignment.CenterVertically,
++                ) {
++                    rating?.let { AppRatingChip(rating = it) }
++                    installCount?.let {
++                        Row(
++                            verticalAlignment = Alignment.CenterVertically,
++                            horizontalArrangement = Arrangement.spacedBy(3.dp)
++                        ) {
++                            Icon(
++                                painter = painterResource(R.drawable.ic_download_manager),
++                                contentDescription = null,
++                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
++                                modifier = Modifier.size(14.dp)
++                            )
++                            Text(
++                                text = it,
++                                style = MaterialTheme.typography.labelSmall,
++                                color = MaterialTheme.colorScheme.onSurfaceVariant,
++                                maxLines = 1,
++                                overflow = TextOverflow.Ellipsis
++                            )
++                        }
++                    }
++                }
++            } else if (!showHomeAction && app.downloadString.isNotBlank()) {
 +                Text(
 +                    text = app.downloadString,
 +                    style = MaterialTheme.typography.labelSmall,
@@ -1922,6 +2214,65 @@ index 2d1e75c64df69fe1ba6b81820734f64b1bd11ddf..ce0289e04abac187f24e45e7f7e2da18
      }
  }
  
+diff --git a/app/src/main/java/com/aurora/store/compose/composable/app/AppRatingChip.kt b/app/src/main/java/com/aurora/store/compose/composable/app/AppRatingChip.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..46ea42fb739a3c489ddf75ca8c1e71bece4dfc57
+--- /dev/null
++++ b/app/src/main/java/com/aurora/store/compose/composable/app/AppRatingChip.kt
+@@ -0,0 +1,53 @@
++/*
++ * SPDX-FileCopyrightText: 2026 Aurora OSS
++ * SPDX-License-Identifier: GPL-3.0-or-later
++ */
++
++package com.aurora.store.compose.composable.app
++
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.Spacer
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.layout.width
++import androidx.compose.foundation.shape.CircleShape
++import androidx.compose.material3.Icon
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Surface
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.res.painterResource
++import androidx.compose.ui.unit.dp
++import com.aurora.store.R
++
++@Composable
++internal fun AppRatingChip(
++    rating: String,
++    modifier: Modifier = Modifier
++) {
++    Surface(
++        modifier = modifier,
++        shape = CircleShape,
++        color = MaterialTheme.colorScheme.secondaryContainer,
++        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
++    ) {
++        Row(
++            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
++            verticalAlignment = Alignment.CenterVertically
++        ) {
++            Icon(
++                painter = painterResource(R.drawable.ic_star),
++                contentDescription = null,
++                modifier = Modifier.size(14.dp)
++            )
++            Spacer(Modifier.width(3.dp))
++            Text(
++                text = rating,
++                style = MaterialTheme.typography.labelSmall,
++                maxLines = 1
++            )
++        }
++    }
++}
 diff --git a/app/src/main/java/com/aurora/store/compose/composable/app/AppUpdateItem.kt b/app/src/main/java/com/aurora/store/compose/composable/app/AppUpdateItem.kt
 index 3b3f7cd9cd422c7e4594b3b6fe879f99e52cf9ca..0ebc26cece7baf58e1899b6fde5368a726d45350 100644
 --- a/app/src/main/java/com/aurora/store/compose/composable/app/AppUpdateItem.kt
@@ -2161,50 +2512,81 @@ index 1def9700b7a14e220306e61a2528ba2f96e77e44..60eed4a80261bffed1697a7c0766363f
                  contentScale = ContentScale.Crop
              )
 diff --git a/app/src/main/java/com/aurora/store/compose/composable/app/LargeAppListItem.kt b/app/src/main/java/com/aurora/store/compose/composable/app/LargeAppListItem.kt
-index 1498fb65297018c015f183e0ceb87bac20a747c7..7b7cd5f0e74df6e832e4b4c990453cb682425a2e 100644
+index 1498fb65297018c015f183e0ceb87bac20a747c7..951e1ffc2adb9da6fb61740abbf9abe7ac2578d6 100644
 --- a/app/src/main/java/com/aurora/store/compose/composable/app/LargeAppListItem.kt
 +++ b/app/src/main/java/com/aurora/store/compose/composable/app/LargeAppListItem.kt
-@@ -5,67 +5,129 @@
+@@ -5,67 +5,272 @@
  
  package com.aurora.store.compose.composable.app
  
 +import androidx.compose.foundation.layout.Arrangement
 +import androidx.compose.foundation.layout.Column
 +import androidx.compose.foundation.layout.PaddingValues
++import androidx.compose.foundation.layout.Row
 +import androidx.compose.foundation.layout.fillMaxWidth
  import androidx.compose.foundation.layout.requiredSize
++import androidx.compose.foundation.layout.size
  import androidx.compose.foundation.shape.RoundedCornerShape
 +import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
++import androidx.compose.material3.FilledTonalButton
++import androidx.compose.material3.Icon
 +import androidx.compose.material3.ListItemDefaults
  import androidx.compose.material3.MaterialTheme
 +import androidx.compose.material3.SegmentedListItem
 +import androidx.compose.material3.Text
++import androidx.compose.runtime.LaunchedEffect
  import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableStateOf
 +import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
  import androidx.compose.ui.Modifier
 +import androidx.compose.ui.Alignment
  import androidx.compose.ui.draw.clip
  import androidx.compose.ui.layout.ContentScale
--import androidx.compose.ui.platform.LocalContext
+ import androidx.compose.ui.platform.LocalContext
  import androidx.compose.ui.res.dimensionResource
++import androidx.compose.ui.res.painterResource
  import androidx.compose.ui.res.stringResource
 +import androidx.compose.ui.text.style.TextOverflow
 +import androidx.compose.ui.unit.dp
  import androidx.compose.ui.tooling.preview.Preview
  import androidx.compose.ui.tooling.preview.PreviewParameter
  import androidx.compose.ui.tooling.preview.PreviewWrapper
- import coil3.compose.AsyncImage
+-import coil3.compose.AsyncImage
 -import coil3.request.ImageRequest
 -import coil3.request.crossfade
++import com.aurora.store.data.model.DownloadStatus
++import com.aurora.store.data.room.download.Download
  import com.aurora.extensions.requiresGMS
  import com.aurora.gplayapi.data.models.App
  import com.aurora.store.R
 -import com.aurora.store.compose.composable.AuroraListItem
-+import com.aurora.store.compose.composable.rememberStoreImageRequest
++import com.aurora.store.compose.composable.app.AnimatedAppIcon
 +import com.aurora.store.compose.composable.auroraSegmentedListItemShapes
++import com.aurora.store.compose.composable.rememberStoreImageRequest
  import com.aurora.store.compose.preview.AppPreviewProvider
  import com.aurora.store.compose.preview.ThemePreviewProvider
  import com.aurora.store.util.CommonUtil
++import com.aurora.store.util.PackageUtil
++import coil3.compose.AsyncImage
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.withContext
++
++private val cancellableDownloadStates = setOf(
++    DownloadStatus.QUEUED,
++    DownloadStatus.PURCHASING,
++    DownloadStatus.DOWNLOADING
++)
++
++private val installingDownloadStates = setOf(
++    DownloadStatus.COMPLETED,
++    DownloadStatus.VERIFYING,
++    DownloadStatus.AWAITING_INSTALL,
++    DownloadStatus.INSTALLING
++)
++
++private val animatedDownloadStates = cancellableDownloadStates + installingDownloadStates
  
 +@OptIn(ExperimentalMaterial3ExpressiveApi::class)
  @Composable
@@ -2220,12 +2602,71 @@ index 1498fb65297018c015f183e0ceb87bac20a747c7..7b7cd5f0e74df6e832e4b4c990453cb6
 +    app: App,
 +    itemIndex: Int = 0,
 +    itemCount: Int = 1,
++    showHomeAction: Boolean = false,
++    download: Download? = null,
++    isUpdatable: Boolean = false,
++    isCancellationPending: Boolean = false,
++    onActionClick: () -> Unit = {},
 +    onClick: () -> Unit = {}
 +) {
++    val context = LocalContext.current
++    var isInstalled by remember(app.packageName) { mutableStateOf(app.isInstalled) }
++    LaunchedEffect(app.packageName, showHomeAction) {
++        if (showHomeAction) {
++            isInstalled = withContext(Dispatchers.IO) {
++                PackageUtil.isInstalled(context, app.packageName)
++            }
++        }
++    }
++    LaunchedEffect(download?.status, showHomeAction) {
++        if (showHomeAction && download?.status == DownloadStatus.INSTALLED) {
++            isInstalled = true
++        }
++    }
++
++    val canOpen = remember(showHomeAction, app.packageName, isInstalled) {
++        showHomeAction && isInstalled && PackageUtil.getLaunchIntent(context, app.packageName) != null
++    }
++    val status = if (showHomeAction) download?.status else null
++    val isCancellable = status != null && status in cancellableDownloadStates
++    val isInstalling = status != null && status in installingDownloadStates
++    val isAnimated = status != null && status in animatedDownloadStates
++    val actionLabel = when {
++        isCancellationPending -> R.string.action_cancel
++        isCancellable -> R.string.action_cancel
++        isInstalling -> R.string.action_installing
++        isUpdatable -> R.string.action_update
++        isInstalled -> R.string.action_open
++        app.isFree -> R.string.action_install
++        else -> null
++    }
++    val isActionEnabled = when {
++        isCancellationPending || isInstalling -> false
++        isCancellable || isUpdatable -> true
++        isInstalled -> canOpen
++        else -> true
++    }
++    val installCount = remember(app.installs, app.downloadString) {
++        CommonUtil.addDiPrefix(app.installs)
++            ?: app.downloadString.takeIf(String::isNotBlank)
++    }
++    val rating = app.labeledRating.takeUnless { it.isBlank() || it == "0.0" }
++
 +    SegmentedListItem(
 +        selected = false,
          onClick = onClick,
 -        leading = {
+-            AsyncImage(
+-                modifier = Modifier
+-                    .requiredSize(dimensionResource(R.dimen.icon_size_medium))
+-                    .clip(RoundedCornerShape(dimensionResource(R.dimen.radius_medium))),
+-                model = ImageRequest.Builder(LocalContext.current)
+-                    .data(app.iconArtwork.url)
+-                    .crossfade(true)
+-                    .build(),
+-                contentDescription = null,
+-                contentScale = ContentScale.Crop
+-            )
 +        shapes = auroraSegmentedListItemShapes(itemIndex, itemCount),
 +        modifier = modifier.fillMaxWidth(),
 +        verticalAlignment = Alignment.CenterVertically,
@@ -2237,19 +2678,27 @@ index 1498fb65297018c015f183e0ceb87bac20a747c7..7b7cd5f0e74df6e832e4b4c990453cb6
 +            vertical = dimensionResource(R.dimen.spacing_small)
 +        ),
 +        leadingContent = {
-             AsyncImage(
-                 modifier = Modifier
-                     .requiredSize(dimensionResource(R.dimen.icon_size_medium))
--                    .clip(RoundedCornerShape(dimensionResource(R.dimen.radius_medium))),
--                model = ImageRequest.Builder(LocalContext.current)
--                    .data(app.iconArtwork.url)
--                    .crossfade(true)
--                    .build(),
-+                    .clip(RoundedCornerShape(dimensionResource(R.dimen.app_icon_radius))),
-+                model = rememberStoreImageRequest(app.iconArtwork.url),
-                 contentDescription = null,
-                 contentScale = ContentScale.Crop
-             )
++            if (showHomeAction) {
++                AnimatedAppIcon(
++                    modifier = Modifier.requiredSize(dimensionResource(R.dimen.icon_size_medium)),
++                    iconUrl = app.iconArtwork.url,
++                    inProgress = isAnimated,
++                    progress = if (status == DownloadStatus.DOWNLOADING) {
++                        download?.progress?.toFloat() ?: 0F
++                    } else {
++                        0F
++                    }
++                )
++            } else {
++                AsyncImage(
++                    modifier = Modifier
++                        .requiredSize(dimensionResource(R.dimen.icon_size_medium))
++                        .clip(RoundedCornerShape(dimensionResource(R.dimen.app_icon_radius))),
++                    model = rememberStoreImageRequest(app.iconArtwork.url),
++                    contentDescription = null,
++                    contentScale = ContentScale.Crop
++                )
++            }
 +        },
 +        supportingContent = {
 +            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -2260,6 +2709,22 @@ index 1498fb65297018c015f183e0ceb87bac20a747c7..7b7cd5f0e74df6e832e4b4c990453cb6
 +                    maxLines = 1,
 +                    overflow = TextOverflow.Ellipsis
 +                )
++                if (showHomeAction && (installCount != null || rating != null)) {
++                    Row(
++                    horizontalArrangement = Arrangement.spacedBy(8.dp),
++                        verticalAlignment = Alignment.CenterVertically
++                    ) {
++                        installCount?.let {
++                            AppInlineMetric(
++                                icon = R.drawable.ic_download_manager,
++                                value = it
++                            )
++                        }
++                        rating?.let {
++                            AppRatingChip(rating = it)
++                        }
++                    }
++                }
 +                Text(
 +                    text = buildAppExtras(app),
 +                    style = MaterialTheme.typography.labelSmall,
@@ -2268,6 +2733,22 @@ index 1498fb65297018c015f183e0ceb87bac20a747c7..7b7cd5f0e74df6e832e4b4c990453cb6
 +                    overflow = TextOverflow.Ellipsis
 +                )
 +            }
++        },
++        trailingContent = if (showHomeAction) {
++            {
++                FilledTonalButton(
++                    onClick = onActionClick,
++                    enabled = isActionEnabled,
++                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
++                ) {
++                    Text(
++                        text = actionLabel?.let { stringResource(it) } ?: app.price,
++                        maxLines = 1
++                    )
++                }
++            }
++        } else {
++            null
          }
 -    )
 +    ) {
@@ -2288,7 +2769,28 @@ index 1498fb65297018c015f183e0ceb87bac20a747c7..7b7cd5f0e74df6e832e4b4c990453cb6
 -    add(
 -        stringResource(
 -            if (app.containsAds) R.string.details_contains_ads else R.string.details_no_ads
--        )
++private fun AppInlineMetric(icon: Int, value: String) {
++    Row(
++        verticalAlignment = Alignment.CenterVertically,
++        horizontalArrangement = Arrangement.spacedBy(4.dp)
++    ) {
++        Icon(
++            painter = painterResource(icon),
++            contentDescription = null,
++            tint = MaterialTheme.colorScheme.onSurfaceVariant,
++            modifier = Modifier.size(14.dp)
+         )
++        Text(
++            text = value,
++            style = MaterialTheme.typography.labelMedium,
++            color = MaterialTheme.colorScheme.onSurfaceVariant,
++            maxLines = 1,
++            overflow = TextOverflow.Ellipsis
++        )
++    }
++}
++
++@Composable
 +private fun buildAppExtras(app: App): String {
 +    val priceLabel = stringResource(if (app.isFree) R.string.details_free else R.string.details_paid)
 +    val adsLabel = stringResource(
@@ -2301,8 +2803,6 @@ index 1498fb65297018c015f183e0ceb87bac20a747c7..7b7cd5f0e74df6e832e4b4c990453cb6
 +
 +    return remember(
 +        app.size,
-+        app.downloadString,
-+        app.labeledRating,
 +        app.isFree,
 +        app.containsAds,
 +        requiresGms,
@@ -2311,8 +2811,7 @@ index 1498fb65297018c015f183e0ceb87bac20a747c7..7b7cd5f0e74df6e832e4b4c990453cb6
 +        gmsLabel
 +    ) {
 +        buildList {
-+            add(if (app.size > 0) CommonUtil.addSiPrefix(app.size) else app.downloadString)
-+            add("${app.labeledRating}★")
++            if (app.size > 0) add(CommonUtil.addSiPrefix(app.size))
 +            add(priceLabel)
 +            add(adsLabel)
 +            if (requiresGms) add(gmsLabel)
@@ -2892,19 +3391,195 @@ index 07e8cdcd6ce9b9128f0ceb55135357a897a349fc..6876255342fae91d059dbdc1a204b60c
  
      @Serializable
      data class PermissionRationale(val requiredPermissions: Set<PermissionType>) : Screen()
+diff --git a/app/src/main/java/com/aurora/store/compose/theme/Color.kt b/app/src/main/java/com/aurora/store/compose/theme/Color.kt
+index 3995533e9a76d140760c2a720197cebfeb4418ed..517fbc6d20bc23b1436df3cd3d82094f5728ddbd 100644
+--- a/app/src/main/java/com/aurora/store/compose/theme/Color.kt
++++ b/app/src/main/java/com/aurora/store/compose/theme/Color.kt
+@@ -6,8 +6,6 @@
+ package com.aurora.store.compose.theme
+ 
+ import androidx.compose.material3.MaterialTheme
+-import androidx.compose.material3.darkColorScheme
+-import androidx.compose.material3.lightColorScheme
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.ReadOnlyComposable
+ import androidx.compose.ui.graphics.Color
+@@ -44,62 +42,3 @@ val colorGreen: Color
+ val colorRed: Color
+     @Composable @ReadOnlyComposable
+     get() = if (isAppInDarkTheme()) Color(0xFFE57373) else Color(0xFFD32F2F)
+-
+-/**
+- * Brand color schemes seeded from Aurora's accent (#6C63FF), used on devices that don't support
+- * dynamic color (Android 11 and below) so the full palette stays on-brand instead of falling back
+- * to Material's default purple baseline.
+- */
+-val BrandLightColorScheme = lightColorScheme(
+-    primary = Color(0xFF6C63FF),
+-    onPrimary = Color(0xFFFFFFFF),
+-    primaryContainer = Color(0xFFE4DFFF),
+-    onPrimaryContainer = Color(0xFF1A0066),
+-    secondary = Color(0xFF5C5D72),
+-    onSecondary = Color(0xFFFFFFFF),
+-    secondaryContainer = Color(0xFFE1E0F9),
+-    onSecondaryContainer = Color(0xFF191A2C),
+-    tertiary = Color(0xFF78536B),
+-    onTertiary = Color(0xFFFFFFFF),
+-    tertiaryContainer = Color(0xFFFFD8EE),
+-    onTertiaryContainer = Color(0xFF2E1126),
+-    background = Color(0xFFFCF8FF),
+-    onBackground = Color(0xFF1B1B21),
+-    surface = Color(0xFFFCF8FF),
+-    onSurface = Color(0xFF1B1B21),
+-    surfaceVariant = Color(0xFFE4E1EC),
+-    onSurfaceVariant = Color(0xFF47464F),
+-    outline = Color(0xFF777680),
+-    outlineVariant = Color(0xFFC8C5D0),
+-    error = Color(0xFFBA1A1A),
+-    onError = Color(0xFFFFFFFF),
+-    errorContainer = Color(0xFFFFDAD6),
+-    onErrorContainer = Color(0xFF410002)
+-)
+-
+-val BrandDarkColorScheme = darkColorScheme(
+-    primary = Color(0xFFC8BFFF),
+-    onPrimary = Color(0xFF31149C),
+-    primaryContainer = Color(0xFF534BD6),
+-    onPrimaryContainer = Color(0xFFE4DFFF),
+-    secondary = Color(0xFFC5C4DD),
+-    onSecondary = Color(0xFF2E2F42),
+-    secondaryContainer = Color(0xFF444559),
+-    onSecondaryContainer = Color(0xFFE1E0F9),
+-    tertiary = Color(0xFFE8B9D5),
+-    onTertiary = Color(0xFF46263B),
+-    tertiaryContainer = Color(0xFF5E3C52),
+-    onTertiaryContainer = Color(0xFFFFD8EE),
+-    background = Color(0xFF131318),
+-    onBackground = Color(0xFFE4E1E9),
+-    surface = Color(0xFF131318),
+-    onSurface = Color(0xFFE4E1E9),
+-    surfaceVariant = Color(0xFF47464F),
+-    onSurfaceVariant = Color(0xFFC8C5D0),
+-    outline = Color(0xFF918F9A),
+-    outlineVariant = Color(0xFF47464F),
+-    error = Color(0xFFFFB4AB),
+-    onError = Color(0xFF690005),
+-    errorContainer = Color(0xFF93000A),
+-    onErrorContainer = Color(0xFFFFDAD6)
+-)
 diff --git a/app/src/main/java/com/aurora/store/compose/theme/Theme.kt b/app/src/main/java/com/aurora/store/compose/theme/Theme.kt
-index 2740ee7249bb88f341415049f91c0e9da4a16e7b..4dc49c988d942eb0a85c08a69aa5546cfa9afa06 100644
+index 2740ee7249bb88f341415049f91c0e9da4a16e7b..e94bd73bb4944bad6adb5076ea7ef6744328d889 100644
 --- a/app/src/main/java/com/aurora/store/compose/theme/Theme.kt
 +++ b/app/src/main/java/com/aurora/store/compose/theme/Theme.kt
-@@ -11,6 +11,7 @@ import android.os.Build
+@@ -6,95 +6,44 @@
+ 
+ package com.aurora.store.compose.theme
+ 
+-import android.content.SharedPreferences
+ import android.os.Build
  import androidx.activity.compose.LocalActivity
  import androidx.compose.foundation.isSystemInDarkTheme
  import androidx.compose.material3.MaterialExpressiveTheme
 +import androidx.compose.material3.MotionScheme
++import androidx.compose.material3.darkColorScheme
  import androidx.compose.material3.dynamicDarkColorScheme
  import androidx.compose.material3.dynamicLightColorScheme
++import androidx.compose.material3.expressiveLightColorScheme
  import androidx.compose.runtime.Composable
-@@ -110,5 +111,9 @@ fun AuroraTheme(content: @Composable () -> Unit) {
+-import androidx.compose.runtime.DisposableEffect
+ import androidx.compose.runtime.SideEffect
+-import androidx.compose.runtime.getValue
+-import androidx.compose.runtime.mutableIntStateOf
+-import androidx.compose.runtime.mutableStateOf
+-import androidx.compose.runtime.remember
+-import androidx.compose.runtime.setValue
+ import androidx.compose.ui.platform.LocalContext
+ import androidx.compose.ui.platform.LocalView
+ import androidx.core.view.WindowCompat
+-import com.aurora.store.util.Preferences
+ 
+ /**
+  * App theme for Aurora Store based on [MaterialExpressiveTheme]
+  */
+ @Composable
+ fun AuroraTheme(content: @Composable () -> Unit) {
++    val darkTheme = isSystemInDarkTheme()
+     val context = LocalContext.current
+-
+-    var themeStyle by remember {
+-        mutableIntStateOf(Preferences.getInteger(context, Preferences.PREFERENCE_THEME_STYLE))
+-    }
+-    var dynamicColor by remember {
+-        mutableStateOf(
+-            Preferences.getBoolean(
+-                context,
+-                Preferences.PREFERENCE_DYNAMIC_COLORS,
+-                Preferences.dynamicColorsDefault
+-            )
+-        )
+-    }
+-    DisposableEffect(Unit) {
+-        val prefs = Preferences.getPrefs(context)
+-        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+-            when (key) {
+-                Preferences.PREFERENCE_THEME_STYLE ->
+-                    themeStyle = Preferences.getInteger(context, key)
+-
+-                Preferences.PREFERENCE_DYNAMIC_COLORS ->
+-                    dynamicColor =
+-                        Preferences.getBoolean(context, key, Preferences.dynamicColorsDefault)
+-            }
++    val colorScheme = when {
++        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
++            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+         }
+-        prefs.registerOnSharedPreferenceChangeListener(listener)
+-        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+-    }
+-    val useDynamicColor = dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+-
+-    val lightScheme = if (useDynamicColor) {
+-        dynamicLightColorScheme(context)
+-    } else {
+-        BrandLightColorScheme
+-    }
+-
+-    val darkScheme = if (useDynamicColor) {
+-        dynamicDarkColorScheme(context)
+-    } else {
+-        BrandDarkColorScheme
+-    }
+-
+-    val colorScheme = when (themeStyle) {
+-        1 -> lightScheme
+-        2 -> darkScheme
+-        else -> if (isSystemInDarkTheme()) darkScheme else lightScheme
+-    }
+-
+-    val darkTheme = when (themeStyle) {
+-        1 -> false
+-        2 -> true
+-        else -> isSystemInDarkTheme()
++        darkTheme -> darkColorScheme()
++        else -> expressiveLightColorScheme()
+     }
+ 
+     /**
+-     * Keep the status/navigation bar icon appearance in sync with the theme's light/dark mode.
++     * Keep the status/navigation bar icon appearance in sync with the system light/dark mode.
+      *
+      * The bars themselves are kept transparent and edge-to-edge by [androidx.activity.enableEdgeToEdge]
+      * (called once in the host activity); we deliberately don't touch `window.statusBarColor` /
+      * `navigationBarColor` here since those setters are deprecated no-ops on Android 15+ and would
+-     * otherwise strip the system contrast scrim. Re-applying the appearance is still required because
+-     * the user can force a light/dark theme that differs from the system, and that isn't known when
+-     * edge-to-edge is first configured.
++     * otherwise strip the system contrast scrim. Re-applying the appearance keeps the icons correct
++     * when Android switches the app between its system light and dark configurations.
+      */
+     val view = LocalView.current
+     val activity = LocalActivity.current
+@@ -110,5 +59,9 @@ fun AuroraTheme(content: @Composable () -> Unit) {
          }
      }
  
@@ -3006,10 +3681,10 @@ index b7a056669c7c06fd8d76212c041024512aaf223f..308f66d6867dd02589a68e53f41f2f40
      }
  }
 diff --git a/app/src/main/java/com/aurora/store/compose/ui/apps/AppsGamesScreen.kt b/app/src/main/java/com/aurora/store/compose/ui/apps/AppsGamesScreen.kt
-index 22a248f2c529604f8becf051c06070acc137bd52..29dff2ad86c15bd1a14376d3ea0ada5277591ad8 100644
+index 22a248f2c529604f8becf051c06070acc137bd52..ef5e0bf890e819143a4a4f740bfd0dc69e0b0367 100644
 --- a/app/src/main/java/com/aurora/store/compose/ui/apps/AppsGamesScreen.kt
 +++ b/app/src/main/java/com/aurora/store/compose/ui/apps/AppsGamesScreen.kt
-@@ -6,21 +6,41 @@
+@@ -6,26 +6,48 @@
  package com.aurora.store.compose.ui.apps
  
  import androidx.annotation.StringRes
@@ -3053,7 +3728,14 @@ index 22a248f2c529604f8becf051c06070acc137bd52..29dff2ad86c15bd1a14376d3ea0ada52
  import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
  import com.aurora.gplayapi.helpers.contracts.StreamContract
  import com.aurora.gplayapi.helpers.contracts.TopChartsContract
-@@ -35,12 +55,72 @@ import kotlinx.coroutines.launch
+ import com.aurora.store.R
+ import com.aurora.store.compose.navigation.Destination
++import com.aurora.store.data.room.download.Download
++import com.aurora.gplayapi.data.models.App
+ import com.aurora.store.util.Preferences
+ import com.aurora.store.viewmodel.category.CategoryViewModel
+ import com.aurora.store.viewmodel.homestream.StreamViewModel
+@@ -35,61 +57,158 @@ import kotlinx.coroutines.launch
  internal fun category(pageType: Int): StreamContract.Category =
      if (pageType == 1) StreamContract.Category.GAME else StreamContract.Category.APPLICATION
  
@@ -3130,7 +3812,14 @@ index 22a248f2c529604f8becf051c06070acc137bd52..29dff2ad86c15bd1a14376d3ea0ada52
  @Composable
  fun AppsGamesScreen(
      pageType: Int,
-@@ -51,45 +131,78 @@ fun AppsGamesScreen(
+     streamViewModel: StreamViewModel = hiltViewModel(key = "stream_$pageType"),
+     topChartViewModel: TopChartViewModel = hiltViewModel(key = "topChart_$pageType"),
+     categoryViewModel: CategoryViewModel = hiltViewModel(key = "category_$pageType"),
++    downloadsByPackage: Map<String, Download> = emptyMap(),
++    cancellingPackageNames: Set<String> = emptySet(),
++    updatablePackageNames: Set<String> = emptySet(),
++    onAppAction: (App) -> Unit = {},
+     onNavigateTo: (Destination) -> Unit = {}
  ) {
      val context = LocalContext.current
  
@@ -3235,8 +3924,14 @@ index 22a248f2c529604f8becf051c06070acc137bd52..29dff2ad86c15bd1a14376d3ea0ada52
              state = pagerState,
              verticalAlignment = Alignment.Top,
              userScrollEnabled = false
-@@ -105,19 +218,23 @@ fun AppsGamesScreen(
+@@ -103,21 +222,29 @@ fun AppsGamesScreen(
+                     onClusterScrolled = { cluster ->
+                         streamViewModel.observeCluster(category(pageType), cluster)
                      },
++                    downloadsByPackage = downloadsByPackage,
++                    cancellingPackageNames = cancellingPackageNames,
++                    updatablePackageNames = updatablePackageNames,
++                    onAppAction = onAppAction,
                      onScrolledToEnd = {
                          streamViewModel.observe(category(pageType), StreamContract.Type.HOME)
 -                    }
@@ -3382,10 +4077,10 @@ index 24c21abf3fa1532e28647a513b9c87a81bcf78c8..c371c79c06e0aedaa3ea21ceabae8f1e
                  )
              }
 diff --git a/app/src/main/java/com/aurora/store/compose/ui/apps/ForYouPage.kt b/app/src/main/java/com/aurora/store/compose/ui/apps/ForYouPage.kt
-index 2b9dbb695cd0da8c0f012716d37f39f6bdf18c9d..9238b73c348d8777b9a787ac5167e2d38c3bf256 100644
+index 2b9dbb695cd0da8c0f012716d37f39f6bdf18c9d..bac8aabd65264f11bcb4367287e25aa641c41c1d 100644
 --- a/app/src/main/java/com/aurora/store/compose/ui/apps/ForYouPage.kt
 +++ b/app/src/main/java/com/aurora/store/compose/ui/apps/ForYouPage.kt
-@@ -11,6 +11,7 @@ import androidx.compose.runtime.LaunchedEffect
+@@ -11,12 +11,14 @@ import androidx.compose.runtime.LaunchedEffect
  import androidx.compose.runtime.getValue
  import androidx.compose.runtime.livedata.observeAsState
  import androidx.compose.ui.Modifier
@@ -3393,24 +4088,42 @@ index 2b9dbb695cd0da8c0f012716d37f39f6bdf18c9d..9238b73c348d8777b9a787ac5167e2d3
  import com.aurora.gplayapi.data.models.App
  import com.aurora.gplayapi.data.models.StreamCluster
  import com.aurora.gplayapi.helpers.contracts.StreamContract
-@@ -26,7 +27,8 @@ internal fun ForYouContent(
+ import com.aurora.store.HomeStash
+ import com.aurora.store.compose.composable.StreamCarousel
+ import com.aurora.store.data.model.ViewState
++import com.aurora.store.data.room.download.Download
+ import com.aurora.store.viewmodel.homestream.StreamViewModel
+ 
+ @Composable
+@@ -26,7 +28,12 @@ internal fun ForYouContent(
      onAppClick: (App) -> Unit,
      onHeaderClick: (StreamCluster) -> Unit,
      onClusterScrolled: (StreamCluster) -> Unit,
 -    onScrolledToEnd: () -> Unit
 +    onScrolledToEnd: () -> Unit,
++    downloadsByPackage: Map<String, Download> = emptyMap(),
++    cancellingPackageNames: Set<String> = emptySet(),
++    updatablePackageNames: Set<String> = emptySet(),
++    onAppAction: (App) -> Unit = {},
 +    bottomContentPadding: Dp
  ) {
      val category = category(pageType)
      val state by viewModel.liveData.observeAsState()
-@@ -40,6 +42,7 @@ internal fun ForYouContent(
+@@ -40,8 +47,14 @@ internal fun ForYouContent(
      StreamCarousel(
          modifier = Modifier.fillMaxSize(),
          streamBundle = streamBundle?.get(category),
 +        bottomContentPadding = bottomContentPadding,
++        showHomeActions = true,
++        downloadsByPackage = downloadsByPackage,
++        cancellingPackageNames = cancellingPackageNames,
++        updatablePackageNames = updatablePackageNames,
          onHeaderClick = onHeaderClick,
          onAppClick = onAppClick,
++        onAppAction = onAppAction,
          onClusterScrolled = onClusterScrolled,
+         onScrolledToEnd = onScrolledToEnd
+     )
 diff --git a/app/src/main/java/com/aurora/store/compose/ui/apps/TopChartsPage.kt b/app/src/main/java/com/aurora/store/compose/ui/apps/TopChartsPage.kt
 index 847f254eaeebc3273d5a7627874e069697375a81..7422d7bc3fdc50082923f69ed1e1567387e21941 100644
 --- a/app/src/main/java/com/aurora/store/compose/ui/apps/TopChartsPage.kt
@@ -7184,11 +7897,14 @@ index 0f6f8d4d03c14eaf5ef2ca6f288f96e9de6f3595..8eb621d94498a601f799327589af9c96
      }
  }
 diff --git a/app/src/main/java/com/aurora/store/compose/ui/main/MainScreen.kt b/app/src/main/java/com/aurora/store/compose/ui/main/MainScreen.kt
-index 044aa6f98af5bcde121a143b3d598366a4430b19..685f2c4cce5ca09dd1dc60e25e600659c0a519a0 100644
+index 044aa6f98af5bcde121a143b3d598366a4430b19..29e317585a733f713b2086a934cb44495bc7e8c0 100644
 --- a/app/src/main/java/com/aurora/store/compose/ui/main/MainScreen.kt
 +++ b/app/src/main/java/com/aurora/store/compose/ui/main/MainScreen.kt
-@@ -7,40 +7,79 @@ package com.aurora.store.compose.ui.main
+@@ -5,42 +5,86 @@
  
+ package com.aurora.store.compose.ui.main
+ 
++import android.content.ActivityNotFoundException
  import androidx.annotation.DrawableRes
  import androidx.annotation.StringRes
 +import androidx.compose.animation.AnimatedVisibility
@@ -7246,6 +7962,7 @@ index 044aa6f98af5bcde121a143b3d598366a4430b19..685f2c4cce5ca09dd1dc60e25e600659
  import androidx.compose.runtime.mutableStateMapOf
  import androidx.compose.runtime.mutableStateOf
  import androidx.compose.runtime.remember
++import androidx.compose.runtime.rememberUpdatedState
 +import androidx.compose.runtime.saveable.rememberSaveable
  import androidx.compose.runtime.rememberCoroutineScope
  import androidx.compose.runtime.setValue
@@ -7264,6 +7981,9 @@ index 044aa6f98af5bcde121a143b3d598366a4430b19..685f2c4cce5ca09dd1dc60e25e600659
  import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
  import androidx.lifecycle.compose.collectAsStateWithLifecycle
  import com.aurora.extensions.requiresObbDir
++import com.aurora.extensions.requiresGMS
++import com.aurora.extensions.toast
++import com.aurora.gplayapi.data.models.App
  import com.aurora.store.MainViewModel
  import com.aurora.store.R
  import com.aurora.store.compose.composable.InsufficientStorageDialog
@@ -7271,7 +7991,7 @@ index 044aa6f98af5bcde121a143b3d598366a4430b19..685f2c4cce5ca09dd1dc60e25e600659
  import com.aurora.store.compose.composable.TrackerUpdateWarningDialog
  import com.aurora.store.compose.composition.LocalNetworkStatus
  import com.aurora.store.compose.navigation.Destination
-@@ -48,6 +87,9 @@ import com.aurora.store.compose.ui.apps.AppsGamesScreen
+@@ -48,14 +92,20 @@ import com.aurora.store.compose.ui.apps.AppsGamesScreen
  import com.aurora.store.compose.ui.commons.MoreSheet
  import com.aurora.store.compose.ui.commons.NetworkScreen
  import com.aurora.store.compose.ui.sheets.AppUpdateSheet
@@ -7280,8 +8000,19 @@ index 044aa6f98af5bcde121a143b3d598366a4430b19..685f2c4cce5ca09dd1dc60e25e600659
 +import com.aurora.store.compose.ui.search.searchPanelMotionSpec
  import com.aurora.store.compose.ui.updates.UpdatesScreen
  import com.aurora.store.data.model.ExodusTracker
++import com.aurora.store.data.model.DownloadStatus
  import com.aurora.store.data.model.NetworkStatus
-@@ -73,6 +115,7 @@ private enum class MainTab(
+ import com.aurora.store.data.model.PermissionType
+ import com.aurora.store.data.model.StorageRequirement
+ import com.aurora.store.data.providers.PermissionProvider.Companion.isGranted
++import com.aurora.store.data.providers.PermissionProvider.Companion.isPermittedToInstall
+ import com.aurora.store.data.room.update.Update
+ import com.aurora.store.util.PackageUtil
++import com.aurora.store.util.FlavouredUtil
+ import com.aurora.store.util.Preferences
+ import com.aurora.store.util.Preferences.PREFERENCE_UPDATES_WARN_TRACKERS
+ import com.aurora.store.util.StorageUtil
+@@ -73,6 +123,7 @@ private enum class MainTab(
      UPDATES(R.string.title_updates, R.drawable.ic_updates)
  }
  
@@ -7289,7 +8020,23 @@ index 044aa6f98af5bcde121a143b3d598366a4430b19..685f2c4cce5ca09dd1dc60e25e600659
  @Composable
  fun MainScreen(
      initialTab: Int = 0,
-@@ -99,8 +142,26 @@ fun MainScreen(
+@@ -89,6 +140,15 @@ fun MainScreen(
+     val updateCount = updates?.size ?: 0
+     val notificationCount by notificationsViewModel.unreadCount.collectAsStateWithLifecycle()
+     val downloads by updatesViewModel.downloadsList.collectAsStateWithLifecycle()
++    val cancellingPackages by updatesViewModel.cancellingPackages.collectAsStateWithLifecycle()
++    val downloadsByPackage = remember(downloads) {
++        downloads.associateBy { it.packageName }
++    }
++    val updatesByPackage = remember(updates) {
++        updates.orEmpty().associateBy { it.packageName }
++    }
++    val latestDownloadsByPackage by rememberUpdatedState(downloadsByPackage)
++    val latestUpdatesByPackage by rememberUpdatedState(updatesByPackage)
+ 
+     val coroutineScope = rememberCoroutineScope()
+     val pagerState = rememberPagerState(
+@@ -99,8 +159,26 @@ fun MainScreen(
      ) {
          MainTab.entries.size
      }
@@ -7316,7 +8063,7 @@ index 044aa6f98af5bcde121a143b3d598366a4430b19..685f2c4cce5ca09dd1dc60e25e600659
      var appUpdateTarget by remember { mutableStateOf<Update?>(null) }
      var trackerWarning by remember {
          mutableStateOf<Pair<Update, List<ExodusTracker>>?>(null)
-@@ -133,6 +194,15 @@ fun MainScreen(
+@@ -133,6 +211,15 @@ fun MainScreen(
          }
      }
  
@@ -7332,7 +8079,81 @@ index 044aa6f98af5bcde121a143b3d598366a4430b19..685f2c4cce5ca09dd1dc60e25e600659
      fun performUpdate(update: Update) {
          if (update.fileList.requiresObbDir() &&
              !isGranted(context, PermissionType.STORAGE_MANAGER)
-@@ -172,162 +242,228 @@ fun MainScreen(
+@@ -146,6 +233,73 @@ fun MainScreen(
+         }
+     }
+ 
++    fun performHomeAppAction(app: App) {
++        // Pager pages can outlive the recomposition that supplied their action lambda. Read
++        // current download/update state at click time so a stale Install callback cannot enqueue
++        // a second request when the visible button has already changed to Cancel.
++        val download = latestDownloadsByPackage[app.packageName]
++        when (download?.status) {
++            DownloadStatus.QUEUED,
++            DownloadStatus.PURCHASING,
++            DownloadStatus.DOWNLOADING -> {
++                updatesViewModel.cancelDownload(app.packageName)
++                return
++            }
++
++            DownloadStatus.COMPLETED,
++            DownloadStatus.VERIFYING,
++            DownloadStatus.AWAITING_INSTALL,
++            DownloadStatus.INSTALLING -> return
++
++            else -> Unit
++        }
++
++        latestUpdatesByPackage[app.packageName]?.let { update ->
++            performUpdate(update)
++            return
++        }
++
++        if (PackageUtil.isInstalled(context, app.packageName) ||
++            download?.status == DownloadStatus.INSTALLED
++        ) {
++            try {
++                val launchIntent = PackageUtil.getLaunchIntent(context, app.packageName)
++                if (launchIntent != null) {
++                    context.startActivity(launchIntent)
++                } else {
++                    context.toast(R.string.unable_to_open)
++                }
++            } catch (_: ActivityNotFoundException) {
++                context.toast(R.string.unable_to_open)
++            }
++            return
++        }
++
++        val requiredPermissions = setOfNotNull(
++            PermissionType.INSTALL_UNKNOWN_APPS,
++            if (app.fileList.requiresObbDir()) PermissionType.STORAGE_MANAGER else null,
++            if (app.fileList.requiresObbDir()) PermissionType.EXTERNAL_STORAGE else null
++        )
++        if (!isPermittedToInstall(context, app)) {
++            handleNavigation(
++                Destination.PermissionRationale(permissions = requiredPermissions)
++            )
++            return
++        }
++
++        val needsDetailsInstallFlow = !app.isFree ||
++            (app.requiresGMS() && FlavouredUtil.promptMicroGInstall(context))
++        if (needsDetailsInstallFlow) {
++            handleNavigation(Destination.AppDetails(app.packageName))
++        } else {
++            updatesViewModel.downloadApp(app) {
++                coroutineScope.launch {
++                    handleNavigation(Destination.AppDetails(app.packageName))
++                }
++            }
++        }
++    }
++
+     if (networkStatus == NetworkStatus.UNAVAILABLE) {
+         NetworkScreen()
+         return
+@@ -172,162 +326,240 @@ fun MainScreen(
          )
      }
  
@@ -7346,7 +8167,11 @@ index 044aa6f98af5bcde121a143b3d598366a4430b19..685f2c4cce5ca09dd1dc60e25e600659
 -                        BadgedBox(
 -                            badge = {
 -                                if (notificationCount > 0) Badge { Text("$notificationCount") }
-+        Box(modifier = Modifier.fillMaxSize()) {
++        Box(
++            modifier = Modifier
++                .fillMaxSize()
++                .background(MaterialTheme.colorScheme.background)
++        ) {
 +        Scaffold(
 +            modifier = Modifier
 +                .fillMaxSize()
@@ -7419,6 +8244,10 @@ index 044aa6f98af5bcde121a143b3d598366a4430b19..685f2c4cce5ca09dd1dc60e25e600659
 +                    when (MainTab.entries[page]) {
 +                        MainTab.APPS -> AppsGamesScreen(
 +                            pageType = 0,
++                            downloadsByPackage = downloadsByPackage,
++                            cancellingPackageNames = cancellingPackages,
++                            updatablePackageNames = updatesByPackage.keys,
++                            onAppAction = ::performHomeAppAction,
 +                            onNavigateTo = onNavigateTo
                          )
 -                    }
@@ -7428,6 +8257,10 @@ index 044aa6f98af5bcde121a143b3d598366a4430b19..685f2c4cce5ca09dd1dc60e25e600659
 -                            contentDescription = stringResource(R.string.title_more)
 +                        MainTab.GAMES -> AppsGamesScreen(
 +                            pageType = 1,
++                            downloadsByPackage = downloadsByPackage,
++                            cancellingPackageNames = cancellingPackages,
++                            updatablePackageNames = updatesByPackage.keys,
++                            onAppAction = ::performHomeAppAction,
 +                            onNavigateTo = ::handleNavigation
                          )
 +                        MainTab.UPDATES -> {
@@ -7698,7 +8531,7 @@ index 044aa6f98af5bcde121a143b3d598366a4430b19..685f2c4cce5ca09dd1dc60e25e600659
      }
  
      trackerWarning?.let { (update, trackers) ->
-@@ -356,3 +492,110 @@ fun MainScreen(
+@@ -356,3 +588,110 @@ fun MainScreen(
          )
      }
  }
@@ -7809,6 +8642,1118 @@ index 044aa6f98af5bcde121a143b3d598366a4430b19..685f2c4cce5ca09dd1dc60e25e600659
 +        }
 +    }
 +}
+diff --git a/app/src/main/java/com/aurora/store/compose/ui/preferences/NotificationPreferenceScreen.kt b/app/src/main/java/com/aurora/store/compose/ui/preferences/NotificationPreferenceScreen.kt
+index f4889cffc4b644e8615fa37b7d930f85a1d014b3..0ca89e5b1e02b24dd8183089bdc03c36f7b4de92 100644
+--- a/app/src/main/java/com/aurora/store/compose/ui/preferences/NotificationPreferenceScreen.kt
++++ b/app/src/main/java/com/aurora/store/compose/ui/preferences/NotificationPreferenceScreen.kt
+@@ -11,8 +11,6 @@ import androidx.compose.foundation.clickable
+ import androidx.compose.foundation.layout.fillMaxSize
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.lazy.LazyColumn
+-import androidx.compose.material3.HorizontalDivider
+-import androidx.compose.material3.ListItem
+ import androidx.compose.material3.Scaffold
+ import androidx.compose.material3.Switch
+ import androidx.compose.material3.Text
+@@ -32,6 +30,8 @@ import com.aurora.Constants
+ import com.aurora.extensions.areNotificationsEnabled
+ import com.aurora.extensions.isOAndAbove
+ import com.aurora.store.R
++import com.aurora.store.compose.ui.preferences.PreferenceRowPosition
++import com.aurora.store.compose.ui.preferences.preferenceRowPosition
+ import com.aurora.store.compose.composable.TopAppBar
+ import com.aurora.store.compose.preview.ThemePreviewProvider
+ import com.aurora.store.util.Preferences
+@@ -82,7 +82,7 @@ private fun ScreenContent() {
+         ) {
+             if (!notificationsEnabled) {
+                 item {
+-                    ListItem(
++                    PreferenceListItem(
+                         modifier = Modifier.clickable { openAppNotificationSettings(context) },
+                         headlineContent = {
+                             Text(stringResource(R.string.pref_notification_disabled))
+@@ -92,11 +92,10 @@ private fun ScreenContent() {
+                         }
+                     )
+                 }
+-                item { HorizontalDivider() }
+             }
+ 
+             item {
+-                ListItem(
++                PreferenceListItem(
+                     modifier = Modifier.clickable {
+                         showProgress = !showProgress
+                         context.save(PREFERENCE_NOTIFICATION_PROGRESS, showProgress)
+@@ -122,9 +121,9 @@ private fun ScreenContent() {
+             // Per-channel system settings are only meaningful on Android O+ where channels
+             // exist; on older versions the app-level toggle above is the only control.
+             if (isOAndAbove) {
+-                item { HorizontalDivider() }
+                 item {
+-                    ListItem(
++                    PreferenceListItem(
++                        position = PreferenceRowPosition.First,
+                         headlineContent = {
+                             Text(stringResource(R.string.pref_notification_categories))
+                         },
+@@ -133,9 +132,10 @@ private fun ScreenContent() {
+                         }
+                     )
+                 }
+-                channels.forEach { (channelId, nameRes) ->
++                channels.forEachIndexed { index, (channelId, nameRes) ->
+                     item {
+-                        ListItem(
++                        PreferenceListItem(
++                            position = preferenceRowPosition(index + 1, channels.size + 1),
+                             modifier = Modifier.clickable {
+                                 openChannelSettings(context, channelId)
+                             },
+diff --git a/app/src/main/java/com/aurora/store/compose/ui/preferences/PreferenceListItem.kt b/app/src/main/java/com/aurora/store/compose/ui/preferences/PreferenceListItem.kt
+new file mode 100644
+index 0000000000000000000000000000000000000000..7e56319edcee4d798c79fdab004fdd659749e273
+--- /dev/null
++++ b/app/src/main/java/com/aurora/store/compose/ui/preferences/PreferenceListItem.kt
+@@ -0,0 +1,115 @@
++/*
++ * SPDX-FileCopyrightText: 2026 Aurora OSS
++ * SPDX-License-Identifier: GPL-3.0-or-later
++ */
++
++package com.aurora.store.compose.ui.preferences
++
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.padding
++import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
++import androidx.compose.material3.ListItemDefaults
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.SegmentedListItem
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.res.dimensionResource
++import androidx.compose.ui.unit.Dp
++import com.aurora.store.R
++import com.aurora.store.compose.composable.auroraSegmentedListItemShapes
++
++enum class PreferenceRowPosition {
++    Single,
++    First,
++    Middle,
++    Last
++}
++
++/** A standard Material 3 settings row with shared-surface list grouping. */
++@OptIn(ExperimentalMaterial3ExpressiveApi::class)
++@Composable
++fun PreferenceListItem(
++    modifier: Modifier = Modifier,
++    headlineContent: @Composable () -> Unit,
++    supportingContent: (@Composable () -> Unit)? = null,
++    leadingContent: (@Composable () -> Unit)? = null,
++    trailingContent: (@Composable () -> Unit)? = null,
++    position: PreferenceRowPosition = PreferenceRowPosition.Single,
++    horizontalPadding: Dp = dimensionResource(R.dimen.spacing_large)
++) {
++    val shapeIndex: Int
++    val shapeCount: Int
++    when (position) {
++        PreferenceRowPosition.Single -> {
++            shapeIndex = 0
++            shapeCount = 1
++        }
++        PreferenceRowPosition.First -> {
++            shapeIndex = 0
++            shapeCount = 2
++        }
++        PreferenceRowPosition.Middle -> {
++            shapeIndex = 1
++            shapeCount = 3
++        }
++        PreferenceRowPosition.Last -> {
++            shapeIndex = 1
++            shapeCount = 2
++        }
++    }
++    SegmentedListItem(
++        shapes = auroraSegmentedListItemShapes(shapeIndex, shapeCount),
++        modifier = Modifier
++            .fillMaxWidth()
++            .padding(horizontal = horizontalPadding)
++            .then(
++                when (position) {
++                    PreferenceRowPosition.Single -> Modifier.padding(
++                        vertical = dimensionResource(R.dimen.spacing_xsmall)
++                    )
++                    PreferenceRowPosition.First,
++                    PreferenceRowPosition.Middle -> Modifier.padding(
++                        bottom = dimensionResource(R.dimen.spacing_xsmall)
++                    )
++                    PreferenceRowPosition.Last -> Modifier
++                }
++            )
++            .then(modifier),
++        colors = ListItemDefaults.segmentedColors(
++            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
++        ),
++        contentPadding = ListItemDefaults.ContentPadding,
++        verticalAlignment = Alignment.CenterVertically,
++        supportingContent = supportingContent,
++        leadingContent = leadingContent,
++        trailingContent = trailingContent
++    ) {
++        headlineContent()
++    }
++}
++
++fun preferenceRowPosition(index: Int, count: Int): PreferenceRowPosition = when {
++    count <= 1 -> PreferenceRowPosition.Single
++    index <= 0 -> PreferenceRowPosition.First
++    index >= count - 1 -> PreferenceRowPosition.Last
++    else -> PreferenceRowPosition.Middle
++}
++
++@Composable
++fun PreferenceSectionHeader(
++    title: String,
++    modifier: Modifier = Modifier
++) {
++    androidx.compose.material3.Text(
++        text = title,
++        style = MaterialTheme.typography.titleSmall,
++        color = MaterialTheme.colorScheme.onSurfaceVariant,
++        modifier = modifier
++            .fillMaxWidth()
++            .padding(
++                horizontal = dimensionResource(R.dimen.spacing_large),
++                vertical = dimensionResource(R.dimen.spacing_small)
++            )
++    )
++}
+diff --git a/app/src/main/java/com/aurora/store/compose/ui/preferences/SettingsScreen.kt b/app/src/main/java/com/aurora/store/compose/ui/preferences/SettingsScreen.kt
+index 45bee12c449378b20c9b46637dff854b73059335..69409be3280e0ab8c47b700fcacf1af51b5fb6a0 100644
+--- a/app/src/main/java/com/aurora/store/compose/ui/preferences/SettingsScreen.kt
++++ b/app/src/main/java/com/aurora/store/compose/ui/preferences/SettingsScreen.kt
+@@ -1,142 +1,290 @@
+ /*
+- * SPDX-FileCopyrightText: 2025 The Calyx Institute
++ * SPDX-FileCopyrightText: 2025-2026 Aurora OSS
+  * SPDX-License-Identifier: GPL-3.0-or-later
+  */
+ 
+ package com.aurora.store.compose.ui.preferences
+ 
+ import androidx.compose.foundation.clickable
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.PaddingValues
+ import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.lazy.itemsIndexed
++import androidx.compose.foundation.text.input.clearText
++import androidx.compose.foundation.text.input.rememberTextFieldState
++import androidx.compose.material3.ExperimentalMaterial3Api
++import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
++import androidx.compose.material3.ExpandedFullScreenSearchBar
+ import androidx.compose.material3.Icon
+-import androidx.compose.material3.ListItem
++import androidx.compose.material3.IconButton
++import androidx.compose.material3.ListItemDefaults
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.SearchBar
+ import androidx.compose.material3.Scaffold
++import androidx.compose.material3.SearchBarDefaults
++import androidx.compose.material3.SegmentedListItem
+ import androidx.compose.material3.Text
++import androidx.compose.material3.rememberSearchBarState
+ import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.rememberCoroutineScope
++import androidx.compose.runtime.snapshotFlow
++import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
++import androidx.compose.ui.res.dimensionResource
+ import androidx.compose.ui.res.painterResource
+ import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.tooling.preview.PreviewWrapper
++import androidx.lifecycle.compose.collectAsStateWithLifecycle
+ import com.aurora.store.R
++import com.aurora.store.compose.composable.ArrowIconBox
+ import com.aurora.store.compose.composable.TopAppBar
++import com.aurora.store.compose.composable.auroraSegmentedListItemShapes
+ import com.aurora.store.compose.navigation.Destination
+ import com.aurora.store.compose.preview.ThemePreviewProvider
+ import com.aurora.store.data.model.PermissionType
++import kotlinx.coroutines.launch
++
++private data class SettingEntry(
++    val title: String,
++    val icon: Int,
++    val destination: Destination,
++    val searchTerms: String
++)
+ 
+ @Composable
+ fun SettingsScreen(onNavigateTo: (Destination) -> Unit) {
+     ScreenContent(onNavigateTo = onNavigateTo)
+ }
+ 
++@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+ @Composable
+ private fun ScreenContent(onNavigateTo: (Destination) -> Unit = {}) {
+-    Scaffold(
+-        topBar = {
+-            TopAppBar(
+-                title = stringResource(R.string.title_settings)
+-            )
++    val entries = listOf(
++        SettingEntry(
++            title = stringResource(R.string.onboarding_title_permissions),
++            icon = R.drawable.ic_list_check,
++            destination = Destination.PermissionRationale(PermissionType.entries.toSet()),
++            searchTerms = "permissions access install storage"
++        ),
++        SettingEntry(
++            title = stringResource(R.string.title_installation),
++            icon = R.drawable.ic_installation,
++            destination = Destination.InstallationPreference,
++            searchTerms = "installer install apk delete"
++        ),
++        SettingEntry(
++            title = stringResource(R.string.pref_ui_title),
++            icon = R.drawable.ic_ui,
++            destination = Destination.UIPreference,
++            searchTerms = "language layout tabs for you apps games"
++        ),
++        SettingEntry(
++            title = stringResource(R.string.title_notifications),
++            icon = R.drawable.ic_notification_settings,
++            destination = Destination.NotificationPreference,
++            searchTerms = "alerts downloads progress channels"
++        ),
++        SettingEntry(
++            title = stringResource(R.string.pref_network_title),
++            icon = R.drawable.ic_network,
++            destination = Destination.NetworkPreference,
++            searchTerms = "proxy dispenser microg vending"
++        ),
++        SettingEntry(
++            title = stringResource(R.string.title_updates),
++            icon = R.drawable.ic_updates,
++            destination = Destination.UpdatesPreference,
++            searchTerms = "automatic frequency sources fdroid trackers"
++        ),
++        SettingEntry(
++            title = stringResource(R.string.title_security),
++            icon = R.drawable.ic_lock,
++            destination = Destination.SecurityPreference,
++            searchTerms = "app lock deeplink security"
++        )
++    )
++    val textFieldState = rememberTextFieldState()
++    val searchBarState = rememberSearchBarState()
++    val coroutineScope = rememberCoroutineScope()
++    val query by remember(textFieldState) {
++        snapshotFlow { textFieldState.text.toString().trim() }
++    }.collectAsStateWithLifecycle(initialValue = "")
++    val matchingEntries = remember(query, entries) {
++        if (query.isEmpty()) entries else entries.filter { entry ->
++            entry.title.contains(query, ignoreCase = true) ||
++                entry.searchTerms.contains(query, ignoreCase = true)
+         }
+-    ) { paddingValues ->
+-        LazyColumn(
+-            modifier = Modifier
+-                .padding(paddingValues)
+-                .fillMaxSize()
+-        ) {
+-            item {
+-                ListItem(
+-                    modifier = Modifier.clickable {
+-                        onNavigateTo(
+-                            Destination.PermissionRationale(PermissionType.entries.toSet())
+-                        )
+-                    },
+-                    leadingContent = {
+-                        Icon(
+-                            painter = painterResource(R.drawable.ic_list_check),
+-                            contentDescription = null
+-                        )
+-                    },
+-                    headlineContent = {
+-                        Text(stringResource(R.string.onboarding_title_permissions))
+-                    }
+-                )
+-            }
+-            item {
+-                ListItem(
+-                    modifier = Modifier.clickable {
+-                        onNavigateTo(Destination.InstallationPreference)
+-                    },
+-                    leadingContent = {
+-                        Icon(
+-                            painter = painterResource(R.drawable.ic_installation),
+-                            contentDescription = null
+-                        )
+-                    },
+-                    headlineContent = { Text(stringResource(R.string.title_installation)) }
+-                )
+-            }
+-            item {
+-                ListItem(
+-                    modifier = Modifier.clickable { onNavigateTo(Destination.UIPreference) },
+-                    leadingContent = {
+-                        Icon(
+-                            painter = painterResource(R.drawable.ic_ui),
+-                            contentDescription = null
+-                        )
+-                    },
+-                    headlineContent = { Text(stringResource(R.string.pref_ui_title)) }
++    }
++
++    val inputField: @Composable () -> Unit = {
++        SearchBarDefaults.InputField(
++            searchBarState = searchBarState,
++            textFieldState = textFieldState,
++            onSearch = {
++                coroutineScope.launch { searchBarState.animateToCollapsed() }
++            },
++            placeholder = { Text(stringResource(R.string.pref_settings_search)) },
++            leadingIcon = {
++                Icon(
++                    painter = painterResource(R.drawable.ic_round_search),
++                    contentDescription = null
+                 )
+-            }
+-            item {
+-                ListItem(
+-                    modifier = Modifier.clickable {
+-                        onNavigateTo(Destination.NotificationPreference)
+-                    },
+-                    leadingContent = {
++            },
++            trailingIcon = {
++                if (query.isNotBlank()) {
++                    IconButton(onClick = textFieldState::clearText) {
+                         Icon(
+-                            painter = painterResource(R.drawable.ic_notification_settings),
+-                            contentDescription = null
++                            painter = painterResource(R.drawable.ic_cancel),
++                            contentDescription = stringResource(R.string.action_clear)
+                         )
+-                    },
+-                    headlineContent = { Text(stringResource(R.string.title_notifications)) }
+-                )
++                    }
++                }
+             }
+-            item {
+-                ListItem(
+-                    modifier = Modifier.clickable { onNavigateTo(Destination.NetworkPreference) },
+-                    leadingContent = {
+-                        Icon(
+-                            painter = painterResource(R.drawable.ic_network),
+-                            contentDescription = null
+-                        )
+-                    },
+-                    headlineContent = { Text(stringResource(R.string.pref_network_title)) }
+-                )
++        )
++    }
++
++    Box(Modifier.fillMaxSize()) {
++        Scaffold(
++            topBar = {
++                Column {
++                    TopAppBar()
++                    Text(
++                        text = stringResource(R.string.title_settings),
++                        style = MaterialTheme.typography.headlineSmall,
++                        color = MaterialTheme.colorScheme.onSurface,
++                        modifier = Modifier
++                            .fillMaxWidth()
++                            .padding(
++                                horizontal = dimensionResource(R.dimen.spacing_large),
++                                vertical = dimensionResource(R.dimen.spacing_small)
++                            )
++                    )
++                    SearchBar(
++                        state = searchBarState,
++                        inputField = inputField,
++                        modifier = Modifier
++                            .fillMaxWidth()
++                            .padding(horizontal = dimensionResource(R.dimen.spacing_large))
++                            .padding(bottom = dimensionResource(R.dimen.spacing_medium))
++                    )
++                }
+             }
+-            item {
+-                ListItem(
+-                    modifier = Modifier.clickable { onNavigateTo(Destination.UpdatesPreference) },
+-                    leadingContent = {
+-                        Icon(
+-                            painter = painterResource(R.drawable.ic_updates),
+-                            contentDescription = null
+-                        )
+-                    },
+-                    headlineContent = { Text(stringResource(R.string.title_updates)) }
++        ) { paddingValues ->
++            LazyColumn(
++                modifier = Modifier
++                    .padding(paddingValues)
++                    .fillMaxSize(),
++                contentPadding = PaddingValues(
++                    bottom = dimensionResource(R.dimen.spacing_large)
+                 )
++            ) {
++                itemsIndexed(entries, key = { _, entry -> entry.title }) { index, entry ->
++                    SegmentedListItem(
++                        shapes = auroraSegmentedListItemShapes(index, entries.size),
++                        modifier = Modifier
++                            .fillMaxWidth()
++                            .clickable { onNavigateTo(entry.destination) }
++                            .padding(horizontal = dimensionResource(R.dimen.spacing_large))
++                            .then(
++                                if (index < entries.lastIndex) {
++                                    Modifier.padding(bottom = dimensionResource(R.dimen.spacing_xsmall))
++                                } else {
++                                    Modifier
++                                }
++                            ),
++                        colors = ListItemDefaults.segmentedColors(
++                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
++                        ),
++                        contentPadding = ListItemDefaults.ContentPadding,
++                        verticalAlignment = Alignment.CenterVertically,
++                        leadingContent = {
++                            Icon(
++                                painter = painterResource(entry.icon),
++                                contentDescription = null
++                            )
++                        },
++                        trailingContent = {
++                            ArrowIconBox(
++                                painter = painterResource(R.drawable.ic_arrow_right),
++                                contentDescription = null,
++                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
++                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
++                            )
++                        }
++                    ) {
++                        Text(entry.title)
++                    }
++                }
+             }
+-            item {
+-                ListItem(
+-                    modifier = Modifier.clickable { onNavigateTo(Destination.SecurityPreference) },
+-                    leadingContent = {
+-                        Icon(
+-                            painter = painterResource(R.drawable.ic_lock),
+-                            contentDescription = null
+-                        )
+-                    },
+-                    headlineContent = { Text(stringResource(R.string.title_security)) }
++        }
++
++        ExpandedFullScreenSearchBar(state = searchBarState, inputField = inputField) {
++            if (matchingEntries.isEmpty()) {
++                Text(
++                    text = stringResource(R.string.pref_settings_search_empty),
++                    color = MaterialTheme.colorScheme.onSurfaceVariant,
++                    modifier = Modifier.padding(
++                        horizontal = dimensionResource(R.dimen.spacing_large),
++                        vertical = dimensionResource(R.dimen.spacing_medium)
++                    )
+                 )
++            } else {
++                LazyColumn(
++                    contentPadding = PaddingValues(vertical = dimensionResource(R.dimen.spacing_small))
++                ) {
++                    itemsIndexed(matchingEntries, key = { _, entry -> entry.title }) { index, entry ->
++                        SegmentedListItem(
++                            shapes = auroraSegmentedListItemShapes(index, matchingEntries.size),
++                            modifier = Modifier
++                                .fillMaxWidth()
++                                .clickable {
++                                    coroutineScope.launch {
++                                        searchBarState.animateToCollapsed()
++                                        textFieldState.clearText()
++                                        onNavigateTo(entry.destination)
++                                    }
++                                }
++                                .padding(horizontal = dimensionResource(R.dimen.spacing_large))
++                                .then(
++                                    if (index < matchingEntries.lastIndex) {
++                                        Modifier.padding(
++                                            bottom = dimensionResource(R.dimen.spacing_xsmall)
++                                        )
++                                    } else {
++                                        Modifier
++                                    }
++                                ),
++                            colors = ListItemDefaults.segmentedColors(
++                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
++                            ),
++                            contentPadding = ListItemDefaults.ContentPadding,
++                            verticalAlignment = Alignment.CenterVertically,
++                            leadingContent = {
++                                Icon(
++                                    painter = painterResource(entry.icon),
++                                    contentDescription = null
++                                )
++                            },
++                            trailingContent = {
++                                ArrowIconBox(
++                                    painter = painterResource(R.drawable.ic_arrow_right),
++                                    contentDescription = null,
++                                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
++                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
++                                )
++                            }
++                        ) {
++                            Text(entry.title)
++                        }
++                    }
++                }
+             }
+         }
+     }
+diff --git a/app/src/main/java/com/aurora/store/compose/ui/preferences/UIPreferenceScreen.kt b/app/src/main/java/com/aurora/store/compose/ui/preferences/UIPreferenceScreen.kt
+index f77dc6c0e7c96cc14f908b8727604394af6716b8..1f4ec58c9bf65f4ae389818ccffae59f1c8dba2a 100644
+--- a/app/src/main/java/com/aurora/store/compose/ui/preferences/UIPreferenceScreen.kt
++++ b/app/src/main/java/com/aurora/store/compose/ui/preferences/UIPreferenceScreen.kt
+@@ -11,8 +11,6 @@ import androidx.compose.foundation.clickable
+ import androidx.compose.foundation.layout.fillMaxSize
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.lazy.LazyColumn
+-import androidx.compose.material3.HorizontalDivider
+-import androidx.compose.material3.ListItem
+ import androidx.compose.material3.Scaffold
+ import androidx.compose.material3.Switch
+ import androidx.compose.material3.Text
+@@ -30,18 +28,14 @@ import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.tooling.preview.PreviewWrapper
+ import androidx.core.net.toUri
+-import com.aurora.extensions.isSAndAbove
+ import com.aurora.extensions.isTAndAbove
+-import com.aurora.extensions.setAppTheme
+ import com.aurora.store.R
+ import com.aurora.store.compose.composable.TopAppBar
+ import com.aurora.store.compose.preview.ThemePreviewProvider
+ import com.aurora.store.compose.ui.preferences.network.SingleChoiceDialog
+ import com.aurora.store.util.Preferences
+ import com.aurora.store.util.Preferences.PREFERENCE_DEFAULT_SELECTED_TAB
+-import com.aurora.store.util.Preferences.PREFERENCE_DYNAMIC_COLORS
+ import com.aurora.store.util.Preferences.PREFERENCE_FOR_YOU
+-import com.aurora.store.util.Preferences.PREFERENCE_THEME_STYLE
+ import com.aurora.store.util.save
+ 
+ @Composable
+@@ -53,10 +47,6 @@ fun UIPreferenceScreen() {
+ private fun ScreenContent() {
+     val context = LocalContext.current
+ 
+-    val themeEntries = stringArrayResource(R.array.pref_theme_style)
+-    var themeStyle by remember {
+-        mutableIntStateOf(Preferences.getInteger(context, PREFERENCE_THEME_STYLE))
+-    }
+     val tabEntries = stringArrayResource(R.array.pref_default_tab)
+     var selectedTab by remember {
+         mutableIntStateOf(Preferences.getInteger(context, PREFERENCE_DEFAULT_SELECTED_TAB))
+@@ -64,33 +54,8 @@ private fun ScreenContent() {
+     var forYou by remember {
+         mutableStateOf(Preferences.getBoolean(context, PREFERENCE_FOR_YOU, true))
+     }
+-    var dynamicColors by remember {
+-        mutableStateOf(
+-            Preferences.getBoolean(
+-                context,
+-                PREFERENCE_DYNAMIC_COLORS,
+-                Preferences.dynamicColorsDefault
+-            )
+-        )
+-    }
+-    var showThemeDialog by remember { mutableStateOf(false) }
+     var showTabDialog by remember { mutableStateOf(false) }
+ 
+-    if (showThemeDialog) {
+-        SingleChoiceDialog(
+-            title = stringResource(R.string.pref_ui_theme),
+-            options = themeEntries.toList(),
+-            selected = themeStyle,
+-            onSelect = { index ->
+-                themeStyle = index
+-                context.save(PREFERENCE_THEME_STYLE, index)
+-                setAppTheme(index)
+-                showThemeDialog = false
+-            },
+-            onDismiss = { showThemeDialog = false }
+-        )
+-    }
+-
+     if (showTabDialog) {
+         SingleChoiceDialog(
+             title = stringResource(R.string.pref_ui_layout_tab),
+@@ -119,7 +84,7 @@ private fun ScreenContent() {
+         ) {
+             if (isTAndAbove) {
+                 item {
+-                    ListItem(
++                    PreferenceListItem(
+                         modifier = Modifier.clickable {
+                             context.startActivity(
+                                 Intent(Settings.ACTION_APP_LOCALE_SETTINGS).apply {
+@@ -132,57 +97,17 @@ private fun ScreenContent() {
+                     )
+                 }
+             }
+-            item { HorizontalDivider() }
+-            item {
+-                ListItem(headlineContent = { Text(stringResource(R.string.pref_ui_theme)) })
+-            }
+-            item {
+-                ListItem(
+-                    modifier = Modifier.clickable { showThemeDialog = true },
+-                    headlineContent = { Text(stringResource(R.string.pref_ui_theme)) },
+-                    supportingContent = { Text(themeEntries.getOrElse(themeStyle) { "" }) }
+-                )
+-            }
+-            if (isSAndAbove) {
+-                item {
+-                    ListItem(
+-                        modifier = Modifier.clickable {
+-                            dynamicColors = !dynamicColors
+-                            context.save(PREFERENCE_DYNAMIC_COLORS, dynamicColors)
+-                        },
+-                        headlineContent = { Text(stringResource(R.string.pref_ui_dynamic_color)) },
+-                        supportingContent = {
+-                            Text(stringResource(R.string.pref_ui_dynamic_color_desc))
+-                        },
+-                        trailingContent = {
+-                            Switch(
+-                                checked = dynamicColors,
+-                                onCheckedChange = { checked ->
+-                                    dynamicColors = checked
+-                                    context.save(PREFERENCE_DYNAMIC_COLORS, checked)
+-                                }
+-                            )
+-                        }
+-                    )
+-                }
+-            }
+-            item { HorizontalDivider() }
++            item { PreferenceSectionHeader(stringResource(R.string.pref_ui_layout)) }
+             item {
+-                ListItem(headlineContent = { Text(stringResource(R.string.pref_ui_layout)) })
+-            }
+-            item {
+-                ListItem(
++                PreferenceListItem(
+                     modifier = Modifier.clickable { showTabDialog = true },
+                     headlineContent = { Text(stringResource(R.string.pref_ui_layout_tab)) },
+                     supportingContent = { Text(tabEntries.getOrElse(selectedTab) { "" }) }
+                 )
+             }
+-            item { HorizontalDivider() }
+-            item {
+-                ListItem(headlineContent = { Text(stringResource(R.string.pref_common_extra)) })
+-            }
++            item { PreferenceSectionHeader(stringResource(R.string.pref_common_extra)) }
+             item {
+-                ListItem(
++                PreferenceListItem(
+                     modifier = Modifier.clickable {
+                         forYou = !forYou
+                         context.save(PREFERENCE_FOR_YOU, forYou)
+diff --git a/app/src/main/java/com/aurora/store/compose/ui/preferences/installation/InstallationPreferenceScreen.kt b/app/src/main/java/com/aurora/store/compose/ui/preferences/installation/InstallationPreferenceScreen.kt
+index 1023f45b176aa3e5e5bc22b70638aaf20fd9315c..e808518375c1ff797b5b18902096de7288b775ad 100644
+--- a/app/src/main/java/com/aurora/store/compose/ui/preferences/installation/InstallationPreferenceScreen.kt
++++ b/app/src/main/java/com/aurora/store/compose/ui/preferences/installation/InstallationPreferenceScreen.kt
+@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.lazy.LazyColumn
+ import androidx.compose.material3.AlertDialog
+-import androidx.compose.material3.HorizontalDivider
+-import androidx.compose.material3.ListItem
+ import androidx.compose.material3.Scaffold
+ import androidx.compose.material3.Switch
+ import androidx.compose.material3.Text
+@@ -29,6 +27,9 @@ import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.tooling.preview.PreviewWrapper
+ import androidx.core.content.getSystemService
+ import com.aurora.store.R
++import com.aurora.store.compose.ui.preferences.PreferenceListItem
++import com.aurora.store.compose.ui.preferences.PreferenceRowPosition
++import com.aurora.store.compose.ui.preferences.PreferenceSectionHeader
+ import com.aurora.store.compose.composable.TopAppBar
+ import com.aurora.store.compose.navigation.Destination
+ import com.aurora.store.compose.preview.ThemePreviewProvider
+@@ -98,20 +99,20 @@ private fun ScreenContent(
+                 .fillMaxSize()
+         ) {
+             item {
+-                ListItem(
++                PreferenceListItem(
+                     modifier = Modifier.clickable { onNavigateTo(Destination.Installer) },
+                     headlineContent = { Text(stringResource(R.string.pref_install_mode_title)) },
+                     supportingContent = { Text(stringResource(R.string.pref_install_mode_summary)) }
+                 )
+             }
+-            item { HorizontalDivider() }
++            item { PreferenceSectionHeader(stringResource(R.string.pref_common_extra)) }
+             item {
+-                ListItem(
+-                    headlineContent = { Text(stringResource(R.string.pref_common_extra)) }
+-                )
+-            }
+-            item {
+-                ListItem(
++                PreferenceListItem(
++                    position = if (isDeviceOwner) {
++                        PreferenceRowPosition.First
++                    } else {
++                        PreferenceRowPosition.Single
++                    },
+                     modifier = Modifier.clickable {
+                         autoDelete = !autoDelete
+                         context.save(PREFERENCE_AUTO_DELETE, autoDelete)
+@@ -133,7 +134,8 @@ private fun ScreenContent(
+             }
+             if (isDeviceOwner) {
+                 item {
+-                    ListItem(
++                    PreferenceListItem(
++                        position = PreferenceRowPosition.Last,
+                         modifier = Modifier.clickable { showClearOwnerDialog = true },
+                         headlineContent = {
+                             Text(stringResource(R.string.pref_clear_device_owner_title))
+diff --git a/app/src/main/java/com/aurora/store/compose/ui/preferences/network/NetworkPreferenceScreen.kt b/app/src/main/java/com/aurora/store/compose/ui/preferences/network/NetworkPreferenceScreen.kt
+index 9d5d4bfc1d6a846bf3c9f77f82ac714835bf80f3..a563dfbb9ad643d8becb88099e7a59c131dfe197 100644
+--- a/app/src/main/java/com/aurora/store/compose/ui/preferences/network/NetworkPreferenceScreen.kt
++++ b/app/src/main/java/com/aurora/store/compose/ui/preferences/network/NetworkPreferenceScreen.kt
+@@ -18,8 +18,6 @@ import androidx.compose.foundation.selection.selectable
+ import androidx.compose.foundation.selection.selectableGroup
+ import androidx.compose.foundation.text.KeyboardOptions
+ import androidx.compose.material3.AlertDialog
+-import androidx.compose.material3.HorizontalDivider
+-import androidx.compose.material3.ListItem
+ import androidx.compose.material3.OutlinedTextField
+ import androidx.compose.material3.RadioButton
+ import androidx.compose.material3.Scaffold
+@@ -44,6 +42,9 @@ import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.tooling.preview.PreviewWrapper
+ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+ import com.aurora.store.R
++import com.aurora.store.compose.ui.preferences.PreferenceListItem
++import com.aurora.store.compose.ui.preferences.PreferenceRowPosition
++import com.aurora.store.compose.ui.preferences.PreferenceSectionHeader
+ import com.aurora.store.compose.composable.TopAppBar
+ import com.aurora.store.compose.navigation.Destination
+ import com.aurora.store.compose.preview.ThemePreviewProvider
+@@ -160,26 +161,26 @@ private fun ScreenContent(
+                 .fillMaxSize()
+         ) {
+             item {
+-                ListItem(
++                PreferenceListItem(
++                    position = PreferenceRowPosition.First,
+                     modifier = Modifier.clickable { onNavigateTo(Destination.Dispenser) },
+                     headlineContent = { Text(stringResource(R.string.pref_dispenser_title)) },
+                     supportingContent = { Text(stringResource(R.string.pref_dispenser_summary)) }
+                 )
+             }
+             item {
+-                ListItem(
++                PreferenceListItem(
++                    position = PreferenceRowPosition.Last,
+                     modifier = Modifier.clickable { showProxyDialog = true },
+                     headlineContent = { Text(stringResource(R.string.pref_network_proxy_url)) },
+                     supportingContent = { Text(stringResource(R.string.pref_network_proxy_desc)) }
+                 )
+             }
+-            item { HorizontalDivider() }
+-            item {
+-                ListItem(headlineContent = { Text(stringResource(R.string.pref_common_extra)) })
+-            }
++            item { PreferenceSectionHeader(stringResource(R.string.pref_common_extra)) }
+             if (hasMicroG) {
+                 item {
+-                    ListItem(
++                    PreferenceListItem(
++                        position = PreferenceRowPosition.First,
+                         modifier = Modifier.clickable {
+                             microGAuth = !microGAuth
+                             context.save(PREFERENCE_MICROG_AUTH, microGAuth)
+@@ -203,7 +204,12 @@ private fun ScreenContent(
+                 }
+             }
+             item {
+-                ListItem(
++                PreferenceListItem(
++                    position = if (hasMicroG) {
++                        PreferenceRowPosition.Last
++                    } else {
++                        PreferenceRowPosition.Single
++                    },
+                     modifier = Modifier.clickable { showVendingDialog = true },
+                     headlineContent = { Text(stringResource(R.string.pref_vending_version_title)) },
+                     supportingContent = { Text(vendingEntries.getOrElse(vendingVersion) { "" }) }
+diff --git a/app/src/main/java/com/aurora/store/compose/ui/preferences/security/SecurityPreferenceScreen.kt b/app/src/main/java/com/aurora/store/compose/ui/preferences/security/SecurityPreferenceScreen.kt
+index 77fa2ac5cad0d122e8c29d22bad54338d0336819..98f035017fabab77db813567755f4df17ac7000d 100644
+--- a/app/src/main/java/com/aurora/store/compose/ui/preferences/security/SecurityPreferenceScreen.kt
++++ b/app/src/main/java/com/aurora/store/compose/ui/preferences/security/SecurityPreferenceScreen.kt
+@@ -9,7 +9,6 @@ import androidx.compose.foundation.clickable
+ import androidx.compose.foundation.layout.fillMaxSize
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.lazy.LazyColumn
+-import androidx.compose.material3.ListItem
+ import androidx.compose.material3.Scaffold
+ import androidx.compose.material3.Switch
+ import androidx.compose.material3.Text
+@@ -25,6 +24,8 @@ import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.tooling.preview.PreviewWrapper
+ import com.aurora.extensions.toast
+ import com.aurora.store.R
++import com.aurora.store.compose.ui.preferences.PreferenceListItem
++import com.aurora.store.compose.ui.preferences.PreferenceRowPosition
+ import com.aurora.store.compose.composable.TopAppBar
+ import com.aurora.store.compose.preview.ThemePreviewProvider
+ import com.aurora.store.util.AppLockAuthenticator
+@@ -74,7 +75,8 @@ private fun ScreenContent() {
+                 .fillMaxSize()
+         ) {
+             item {
+-                ListItem(
++                PreferenceListItem(
++                    position = PreferenceRowPosition.First,
+                     modifier = Modifier.clickable { setAppLock(!appLockEnabled) },
+                     headlineContent = { Text(stringResource(R.string.app_lock_title)) },
+                     supportingContent = { Text(stringResource(R.string.app_lock_summary)) },
+@@ -88,7 +90,8 @@ private fun ScreenContent() {
+             }
+ 
+             item {
+-                ListItem(
++                PreferenceListItem(
++                    position = PreferenceRowPosition.Last,
+                     modifier = Modifier.clickable { setConfirmDeepLink(!confirmDeepLink) },
+                     headlineContent = { Text(stringResource(R.string.confirm_deeplink_title)) },
+                     supportingContent = { Text(stringResource(R.string.confirm_deeplink_summary)) },
+diff --git a/app/src/main/java/com/aurora/store/compose/ui/preferences/updates/SourceFiltersScreen.kt b/app/src/main/java/com/aurora/store/compose/ui/preferences/updates/SourceFiltersScreen.kt
+index 9c9ac0458ae327d87323e9a2dfa19a1d2024e1af..8845f6ef029855367b28abe6fd61fc752793e4ee 100644
+--- a/app/src/main/java/com/aurora/store/compose/ui/preferences/updates/SourceFiltersScreen.kt
++++ b/app/src/main/java/com/aurora/store/compose/ui/preferences/updates/SourceFiltersScreen.kt
+@@ -10,12 +10,10 @@ import androidx.compose.foundation.layout.Column
+ import androidx.compose.foundation.layout.fillMaxSize
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.lazy.LazyColumn
+-import androidx.compose.foundation.lazy.items
++import androidx.compose.foundation.lazy.itemsIndexed
+ import androidx.compose.material3.AlertDialog
+-import androidx.compose.material3.HorizontalDivider
+ import androidx.compose.material3.Icon
+ import androidx.compose.material3.IconButton
+-import androidx.compose.material3.ListItem
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.OutlinedTextField
+ import androidx.compose.material3.Scaffold
+@@ -36,6 +34,10 @@ import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.tooling.preview.PreviewWrapper
+ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+ import com.aurora.store.R
++import com.aurora.store.compose.ui.preferences.PreferenceListItem
++import com.aurora.store.compose.ui.preferences.PreferenceRowPosition
++import com.aurora.store.compose.ui.preferences.PreferenceSectionHeader
++import com.aurora.store.compose.ui.preferences.preferenceRowPosition
+ import com.aurora.store.compose.composable.TopAppBar
+ import com.aurora.store.compose.preview.ThemePreviewProvider
+ import com.aurora.store.util.Preferences
+@@ -88,7 +90,8 @@ private fun ScreenContent(onCheckUpdatesNow: () -> Unit = {}) {
+                 .fillMaxSize()
+         ) {
+             item {
+-                ListItem(
++                PreferenceListItem(
++                    position = PreferenceRowPosition.Single,
+                     modifier = Modifier.clickable {
+                         auroraOnly = !auroraOnly
+                         context.save(PREFERENCE_FILTER_AURORA_ONLY, auroraOnly)
+@@ -108,17 +111,11 @@ private fun ScreenContent(onCheckUpdatesNow: () -> Unit = {}) {
+                     }
+                 )
+             }
+-            item { HorizontalDivider() }
+-            item {
+-                ListItem(
+-                    headlineContent = {
+-                        Text(stringResource(R.string.source_filters_installers_header))
+-                    }
+-                )
+-            }
++            item { PreferenceSectionHeader(stringResource(R.string.source_filters_installers_header)) }
+             if (installers.isEmpty()) {
+                 item {
+-                    ListItem(
++                    PreferenceListItem(
++                        position = PreferenceRowPosition.First,
+                         headlineContent = {
+                             Text(
+                                 text = stringResource(R.string.source_filters_installers_empty),
+@@ -129,8 +126,9 @@ private fun ScreenContent(onCheckUpdatesNow: () -> Unit = {}) {
+                     )
+                 }
+             } else {
+-                items(items = installers.toList(), key = { it }) { name ->
+-                    ListItem(
++                itemsIndexed(items = installers.toList(), key = { _, name -> name }) { index, name ->
++                    PreferenceListItem(
++                        position = preferenceRowPosition(index, installers.size + 1),
+                         headlineContent = { Text(name) },
+                         trailingContent = {
+                             IconButton(
+@@ -151,7 +149,8 @@ private fun ScreenContent(onCheckUpdatesNow: () -> Unit = {}) {
+                 }
+             }
+             item {
+-                ListItem(
++                PreferenceListItem(
++                    position = PreferenceRowPosition.Last,
+                     modifier = Modifier.clickable { showAddDialog = true },
+                     leadingContent = {
+                         Icon(
+diff --git a/app/src/main/java/com/aurora/store/compose/ui/preferences/updates/UpdatesPreferenceScreen.kt b/app/src/main/java/com/aurora/store/compose/ui/preferences/updates/UpdatesPreferenceScreen.kt
+index 7d8634cfe9cff88ab5c909aa2dac8516150ee094..f0554001423b9359c0788bc65781e454a0f5848e 100644
+--- a/app/src/main/java/com/aurora/store/compose/ui/preferences/updates/UpdatesPreferenceScreen.kt
++++ b/app/src/main/java/com/aurora/store/compose/ui/preferences/updates/UpdatesPreferenceScreen.kt
+@@ -21,8 +21,6 @@ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.lazy.LazyColumn
+ import androidx.compose.material3.AlertDialog
+ import androidx.compose.material3.Checkbox
+-import androidx.compose.material3.HorizontalDivider
+-import androidx.compose.material3.ListItem
+ import androidx.compose.material3.Scaffold
+ import androidx.compose.material3.Switch
+ import androidx.compose.material3.Text
+@@ -50,6 +48,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
+ import com.aurora.extensions.isIgnoringBatteryOptimizations
+ import com.aurora.extensions.isTAndAbove
+ import com.aurora.store.R
++import com.aurora.store.compose.ui.preferences.PreferenceListItem
++import com.aurora.store.compose.ui.preferences.PreferenceRowPosition
++import com.aurora.store.compose.ui.preferences.PreferenceSectionHeader
+ import com.aurora.store.compose.composable.TopAppBar
+ import com.aurora.store.compose.navigation.Destination
+ import com.aurora.store.compose.preview.ThemePreviewProvider
+@@ -248,7 +249,12 @@ private fun ScreenContent(
+                 .fillMaxSize()
+         ) {
+             item {
+-                ListItem(
++                PreferenceListItem(
++                    position = if (autoEnabled) {
++                        PreferenceRowPosition.First
++                    } else {
++                        PreferenceRowPosition.Single
++                    },
+                     modifier = Modifier.clickable { showAutoDialog = true },
+                     headlineContent = { Text(stringResource(R.string.pref_updates_auto)) },
+                     supportingContent = { Text(autoEntries.getOrElse(autoMode) { "" }) }
+@@ -256,7 +262,8 @@ private fun ScreenContent(
+             }
+             if (autoEnabled) {
+                 item {
+-                    ListItem(
++                    PreferenceListItem(
++                        position = PreferenceRowPosition.Middle,
+                         modifier = Modifier.clickable { showFrequencyDialog = true },
+                         headlineContent = {
+                             Text(stringResource(R.string.pref_updates_check_frequency))
+@@ -267,7 +274,8 @@ private fun ScreenContent(
+                     )
+                 }
+                 item {
+-                    ListItem(
++                    PreferenceListItem(
++                        position = PreferenceRowPosition.Last,
+                         modifier = Modifier.clickable { showRestrictionsDialog = true },
+                         headlineContent = {
+                             Text(stringResource(R.string.pref_updates_restrictions_title))
+@@ -278,14 +286,10 @@ private fun ScreenContent(
+                     )
+                 }
+             }
+-            item { HorizontalDivider() }
+-            item {
+-                ListItem(headlineContent = {
+-                    Text(stringResource(R.string.pref_updates_app_source))
+-                })
+-            }
++            item { PreferenceSectionHeader(stringResource(R.string.pref_updates_app_source)) }
+             item {
+-                ListItem(
++                PreferenceListItem(
++                    position = PreferenceRowPosition.Single,
+                     modifier = Modifier.clickable {
+                         onNavigateTo(Destination.SourceFilters)
+                     },
+@@ -297,12 +301,10 @@ private fun ScreenContent(
+                     }
+                 )
+             }
+-            item { HorizontalDivider() }
++            item { PreferenceSectionHeader(stringResource(R.string.pref_common_advanced)) }
+             item {
+-                ListItem(headlineContent = { Text(stringResource(R.string.pref_common_advanced)) })
+-            }
+-            item {
+-                ListItem(
++                PreferenceListItem(
++                    position = PreferenceRowPosition.First,
+                     modifier = Modifier.clickable {
+                         filterFDroid = !filterFDroid
+                         context.save(PREFERENCE_FILTER_FDROID, filterFDroid)
+@@ -325,7 +327,8 @@ private fun ScreenContent(
+                 )
+             }
+             item {
+-                ListItem(
++                PreferenceListItem(
++                    position = PreferenceRowPosition.Middle,
+                     modifier = Modifier.clickable {
+                         updatesExtended = !updatesExtended
+                         context.save(PREFERENCE_UPDATES_EXTENDED, updatesExtended)
+@@ -348,7 +351,12 @@ private fun ScreenContent(
+                 )
+             }
+             item {
+-                ListItem(
++                PreferenceListItem(
++                    position = if (selfUpdateSupported) {
++                        PreferenceRowPosition.Middle
++                    } else {
++                        PreferenceRowPosition.Last
++                    },
+                     modifier = Modifier.clickable {
+                         warnTrackers = !warnTrackers
+                         context.save(PREFERENCE_UPDATES_WARN_TRACKERS, warnTrackers)
+@@ -377,7 +385,8 @@ private fun ScreenContent(
+                         context.save(PREFERENCE_SELF_UPDATE_ENABLED, enabled)
+                         if (enabled) onCheckUpdatesNow() else onDeleteSelfUpdate()
+                     }
+-                    ListItem(
++                    PreferenceListItem(
++                        position = PreferenceRowPosition.Last,
+                         modifier = Modifier.clickable {
+                             onSelfUpdateChanged(!selfUpdateEnabled)
+                         },
 diff --git a/app/src/main/java/com/aurora/store/compose/ui/search/SearchMotion.kt b/app/src/main/java/com/aurora/store/compose/ui/search/SearchMotion.kt
 new file mode 100644
 index 0000000000000000000000000000000000000000..7e4f5943bdd9d7cf553ba89f5d58f2f6c520747e
@@ -9031,6 +10976,168 @@ index ac92dca004ce4aba257a31885fb58d15efed2fa1..8f133418ebb87f41d92a51cacf943c8a
              onClick = {
                  onNavigateTo(Destination.AppUpdate(update))
              },
+diff --git a/app/src/main/java/com/aurora/store/util/Preferences.kt b/app/src/main/java/com/aurora/store/util/Preferences.kt
+index fb82fdef796887802ed410ecc30035602a4677d6..86ebdc7c938e62b25bc741f3b727ea110b4eb673 100644
+--- a/app/src/main/java/com/aurora/store/util/Preferences.kt
++++ b/app/src/main/java/com/aurora/store/util/Preferences.kt
+@@ -10,24 +10,14 @@ import android.content.SharedPreferences
+ import androidx.core.content.edit
+ import androidx.fragment.app.Fragment
+ import androidx.preference.PreferenceManager
+-import com.aurora.extensions.isOneUI
+ import com.aurora.store.BuildConfig
+ 
+ object Preferences {
+ 
+     const val PREFERENCE_DEFAULT = "PREFERENCE_DEFAULT"
+ 
+-    /**
+-     * Default for [PREFERENCE_DYNAMIC_COLORS]. Dynamic color is opt-out everywhere except One UI,
+-     * where Samsung's palette extraction tends to look off, so it defaults off and users can opt in.
+-     */
+-    val dynamicColorsDefault: Boolean
+-        get() = !isOneUI
+-
+     const val PREFERENCE_AUTH_DATA = "PREFERENCE_AUTH_DATA"
+     const val PREFERENCE_INSTALLER_ID = "PREFERENCE_INSTALLER_ID"
+-    const val PREFERENCE_THEME_STYLE = "PREFERENCE_THEME_STYLE"
+-    const val PREFERENCE_DYNAMIC_COLORS = "PREFERENCE_DYNAMIC_COLORS"
+     const val PREFERENCE_FOR_YOU = "PREFERENCE_FOR_YOU"
+     const val PREFERENCE_DEFAULT_SELECTED_TAB = "PREFERENCE_DEFAULT_SELECTED_TAB"
+     const val PREFERENCE_INTRO = "PREFERENCE_INTRO"
+diff --git a/app/src/main/java/com/aurora/store/viewmodel/all/UpdatesViewModel.kt b/app/src/main/java/com/aurora/store/viewmodel/all/UpdatesViewModel.kt
+index 72bde1b7af2d84e6bb9b8efe692c05a3782c08c6..d05e27275316f89bd26f60447b47bf79c513c5f4 100644
+--- a/app/src/main/java/com/aurora/store/viewmodel/all/UpdatesViewModel.kt
++++ b/app/src/main/java/com/aurora/store/viewmodel/all/UpdatesViewModel.kt
+@@ -6,11 +6,16 @@
+ package com.aurora.store.viewmodel.all
+ 
+ import android.content.Context
++import android.util.Log
+ import androidx.lifecycle.ViewModel
+ import androidx.lifecycle.viewModelScope
++import com.aurora.extensions.TAG
++import com.aurora.gplayapi.helpers.AppDetailsHelper
+ import com.aurora.store.data.ExodusRepository
+ import com.aurora.store.data.helper.DownloadHelper
+ import com.aurora.store.data.helper.UpdateHelper
++import com.aurora.store.data.model.DownloadStatus
++import com.aurora.gplayapi.data.models.App
+ import com.aurora.store.data.model.ExodusTracker
+ import com.aurora.store.data.model.StorageRequirement
+ import com.aurora.store.data.room.update.Update
+@@ -18,6 +23,11 @@ import com.aurora.store.util.StorageUtil
+ import dagger.hilt.android.lifecycle.HiltViewModel
+ import dagger.hilt.android.qualifiers.ApplicationContext
+ import javax.inject.Inject
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.asStateFlow
++import kotlinx.coroutines.flow.first
++import kotlinx.coroutines.flow.update
+ import kotlinx.coroutines.flow.MutableSharedFlow
+ import kotlinx.coroutines.flow.asSharedFlow
+ import kotlinx.coroutines.launch
+@@ -26,6 +36,7 @@ import kotlinx.coroutines.launch
+ class UpdatesViewModel @Inject constructor(
+     val updateHelper: UpdateHelper,
+     private val downloadHelper: DownloadHelper,
++    private val appDetailsHelper: AppDetailsHelper,
+     private val exodusRepository: ExodusRepository,
+     @ApplicationContext private val context: Context
+ ) : ViewModel() {
+@@ -35,6 +46,9 @@ class UpdatesViewModel @Inject constructor(
+     private val _storageWarning = MutableSharedFlow<StorageRequirement>()
+     val storageWarning = _storageWarning.asSharedFlow()
+ 
++    private val _cancellingPackages = MutableStateFlow<Set<String>>(emptySet())
++    val cancellingPackages = _cancellingPackages.asStateFlow()
++
+     val downloadsList get() = downloadHelper.downloadsList
+     val updates get() = updateHelper.updates
+     val ignoredUpdates get() = updateHelper.ignoredUpdates
+@@ -57,6 +71,25 @@ class UpdatesViewModel @Inject constructor(
+         }
+     }
+ 
++    fun downloadApp(app: App, onDetailsFallback: () -> Unit = {}) {
++        viewModelScope.launch(Dispatchers.IO) {
++            // Discovery cards can carry a partial App model even when some file URLs are
++            // present. Resolve the same complete model used by the details page before
++            // enqueueing, so split APKs, dependencies, and version metadata stay consistent.
++            val downloadableApp = try {
++                appDetailsHelper.getAppByPackageName(app.packageName)
++                    .copy(isInstalled = app.isInstalled)
++            } catch (exception: Exception) {
++                Log.e(TAG, "Could not load install files for ${app.packageName}", exception)
++                onDetailsFallback()
++                return@launch
++            }
++            if (hasSpaceFor(downloadableApp)) {
++                downloadHelper.enqueueApp(downloadableApp)
++            }
++        }
++    }
++
+     suspend fun getNewTrackers(
+         packageName: String,
+         installedVersionCode: Long
+@@ -78,8 +111,34 @@ class UpdatesViewModel @Inject constructor(
+         return requirement.isSufficient
+     }
+ 
++    private suspend fun hasSpaceFor(app: App): Boolean {
++        if (!downloadHelper.needsDownload(app.packageName, app.versionCode)) return true
++
++        val requirement = StorageUtil.check(context, listOf(app.size), app.displayName)
++        if (!requirement.isSufficient) _storageWarning.emit(requirement)
++        return requirement.isSufficient
++    }
++
+     fun cancelDownload(packageName: String) {
+-        viewModelScope.launch { downloadHelper.cancelDownload(packageName) }
++        viewModelScope.launch {
++            if (packageName in _cancellingPackages.value) return@launch
++            _cancellingPackages.update { it + packageName }
++            try {
++                downloadHelper.cancelDownload(packageName)
++                downloadHelper.downloadsList.first { downloads ->
++                    downloads.none { download ->
++                        download.packageName == packageName && download.status in setOf(
++                            DownloadStatus.QUEUED,
++                            DownloadStatus.PURCHASING,
++                            DownloadStatus.DOWNLOADING,
++                            DownloadStatus.VERIFYING
++                        )
++                    }
++                }
++            } finally {
++                _cancellingPackages.update { it - packageName }
++            }
++        }
+     }
+ 
+     fun cancelAll() {
+diff --git a/app/src/main/java/com/aurora/store/viewmodel/onboarding/OnboardingViewModel.kt b/app/src/main/java/com/aurora/store/viewmodel/onboarding/OnboardingViewModel.kt
+index e672854a16b50ac710b82ee3aff0625ee9e7248c..54a8276ec9ffb461e3f9e4cb363b742ffff3b068 100644
+--- a/app/src/main/java/com/aurora/store/viewmodel/onboarding/OnboardingViewModel.kt
++++ b/app/src/main/java/com/aurora/store/viewmodel/onboarding/OnboardingViewModel.kt
+@@ -35,7 +35,6 @@ import com.aurora.store.util.Preferences.PREFERENCE_FILTER_FDROID
+ import com.aurora.store.util.Preferences.PREFERENCE_FOR_YOU
+ import com.aurora.store.util.Preferences.PREFERENCE_INSTALLER_ID
+ import com.aurora.store.util.Preferences.PREFERENCE_INTRO
+-import com.aurora.store.util.Preferences.PREFERENCE_THEME_STYLE
+ import com.aurora.store.util.Preferences.PREFERENCE_UPDATES_AUTO
+ import com.aurora.store.util.Preferences.PREFERENCE_UPDATES_CHECK_INTERVAL
+ import com.aurora.store.util.Preferences.PREFERENCE_UPDATES_EXTENDED
+@@ -123,7 +122,6 @@ class OnboardingViewModel @Inject constructor(
+         save(PREFERENCE_VENDING_VERSION, 0)
+ 
+         /*Customization*/
+-        save(PREFERENCE_THEME_STYLE, 0)
+         save(PREFERENCE_DEFAULT_SELECTED_TAB, 0)
+         save(PREFERENCE_FOR_YOU, true)
+ 
 diff --git a/app/src/main/java/com/aurora/store/viewmodel/search/SearchViewModel.kt b/app/src/main/java/com/aurora/store/viewmodel/search/SearchViewModel.kt
 index 6472c6d9c952198a471b2d189a20319946859363..c1042e3b2e793ca45c0333f90c24c20a28043c91 100644
 --- a/app/src/main/java/com/aurora/store/viewmodel/search/SearchViewModel.kt
@@ -9094,6 +11201,23 @@ index 0000000000000000000000000000000000000000..610d0c732e6ef0cce6ef1cb734c7b998
 +        android:fillColor="@android:color/white"
 +        android:pathData="M12,17.27L18.18,21l-1.64,-7.03L22,9.24l-7.19,-0.62L12,2L9.19,8.63L2,9.24l5.46,4.73L5.82,21z" />
 +</vector>
+diff --git a/app/src/main/res/values-night/themes.xml b/app/src/main/res/values-night/themes.xml
+index 4d1ce7072661a496a3e880de3c54e9f4c15733be..9eadab85f2c08df1be5207bb5552a24be82badb4 100644
+--- a/app/src/main/res/values-night/themes.xml
++++ b/app/src/main/res/values-night/themes.xml
+@@ -5,10 +5,10 @@
+   -->
+ <resources>
+ 
+-    <style name="AppTheme" parent="Theme.Material3.DynamicColors.Dark.NoActionBar">
++    <style name="AppTheme" parent="Theme.Material3.Dark.NoActionBar">
+         <item name="chipStyle">@style/Chip.Filter</item>
+         <item name="android:statusBarColor">@android:color/transparent</item>
+-        <!-- Brand accent for devices without dynamic color (Android 11 and below) -->
++        <!-- Brand accent for legacy Android Views; Compose uses MaterialExpressiveTheme. -->
+         <item name="colorPrimary">@color/colorAccent</item>
+     </style>
+ </resources>
 diff --git a/app/src/main/res/values/colors.xml b/app/src/main/res/values/colors.xml
 index 78e7e8daa99d000fbf77e44187c0833c0612736d..d9daaa5ea23728367d832d2d010f36ad96d180f3 100644
 --- a/app/src/main/res/values/colors.xml
@@ -9120,7 +11244,7 @@ index 25ac7173c88fc584ea29f9e3e4ec5c71cecc7d70..7debc34be5f352a83792675771a58b07
      <dimen name="scroll_hint_padding">5dp</dimen>
  </resources>
 diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
-index db0a23e855712ad15c48abf6105080051f331b1e..5a63a131ae86fbe613bfee952f78ff7afc08ecf1 100644
+index db0a23e855712ad15c48abf6105080051f331b1e..056fd241c4cc509a30a3f76b6a066a857352966a 100644
 --- a/app/src/main/res/values/strings.xml
 +++ b/app/src/main/res/values/strings.xml
 @@ -69,6 +69,7 @@
@@ -9148,7 +11272,16 @@ index db0a23e855712ad15c48abf6105080051f331b1e..5a63a131ae86fbe613bfee952f78ff7a
      <string name="details_ratings_title_hint">"Review title"</string>
      <string name="details_review_comment_hint">"Describe your experience (optional)"</string>
      <string name="details_review_edit">"Edit your review"</string>
-@@ -616,6 +627,17 @@
+@@ -339,6 +350,8 @@
+     <string name="title_no_network">"No network"</string>
+     <string name="title_purchase_history">"Purchase history"</string>
+     <string name="title_settings">"Settings"</string>
++    <string name="pref_settings_search">Search settings</string>
++    <string name="pref_settings_search_empty">No matching settings</string>
+     <string name="title_notifications">"Notifications"</string>
+     <string name="pref_notification_progress">Show download progress</string>
+     <string name="pref_notification_progress_desc">Show detailed progress while downloading and updating apps. When off, a single quiet notification keeps downloads running in the background.</string>
+@@ -616,6 +629,17 @@
      <string name="no_description">No description available</string>
      <string name="permissions_requested"><xliff:g id="number_of_permissions">%1$d</xliff:g> permissions</string>
      <string name="details_more_info">More info</string>
@@ -9166,6 +11299,29 @@ index db0a23e855712ad15c48abf6105080051f331b1e..5a63a131ae86fbe613bfee952f78ff7a
      <string name="details_more_files">Files</string>
      <string name="details_more_target_api">Targets</string>
      <string name="details_more_package_name">Package name</string>
+diff --git a/app/src/main/res/values/themes.xml b/app/src/main/res/values/themes.xml
+index 01baf4a8d8f7ac1d8a0e08208a9f20f1c95b5d83..0a75b572c2a539a89af7550c4a2ea2189eeb31ec 100644
+--- a/app/src/main/res/values/themes.xml
++++ b/app/src/main/res/values/themes.xml
+@@ -4,15 +4,15 @@
+   -->
+ <resources>
+ 
+-    <style name="AppTheme" parent="Theme.Material3.DynamicColors.Light.NoActionBar">
++    <style name="AppTheme" parent="Theme.Material3.Light.NoActionBar">
+         <item name="chipStyle">@style/Chip.Filter</item>
+         <item name="bottomSheetStyle">@style/AppTheme.BottomSheetStyle</item>
+         <item name="android:statusBarColor">@android:color/transparent</item>
+-        <!-- Brand accent for devices without dynamic color (Android 11 and below) -->
++        <!-- Brand accent for legacy Android Views; Compose uses MaterialExpressiveTheme. -->
+         <item name="colorPrimary">@color/colorAccent</item>
+     </style>
+ 
+-    <style name="AppTheme.Translucent" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar">
++    <style name="AppTheme.Translucent" parent="Theme.Material3.DayNight.NoActionBar">
+         <item name="android:windowNoTitle">true</item>
+         <item name="android:windowBackground">@android:color/transparent</item>
+         <item name="android:colorBackgroundCacheHint">@null</item>
 diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
 index 71467a12fda00159f6dc3cad1cd358adfc128afc..c45d164fde5946bd10f3b439cf3c27e7340385c9 100644
 --- a/gradle/libs.versions.toml
