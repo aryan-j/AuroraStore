@@ -1,18 +1,17 @@
 # Generated Patch Manifest
 
-- Generated: 2026-10-09T08:43:44Z
+- Generated: 2026-10-09T10:06:43Z
 - Baseline commit: e17b1a4a2be9c325dbced6946b5cc91e83c13b02
-- Source HEAD: 432d42830a8bd05d92d1c09339abba3e08f50d22
-- Files: 98 total (85 modified, 12 added, 1 deleted)
+- Source HEAD: a0d2b3f795bc75d9df9a12d20783dbbb95e8741f
+- Files: 97 total (85 modified, 12 added, 0 deleted)
 - Patch: aurora-expressive-ui.patch
-- Patch SHA-256: e0a0617fc457c54c5129e87351e4aedddfbbeb03d63f9ceec6535250f66c783c
+- Patch SHA-256: c7849b912c88b2bebe1c67a840bc8cc1ddc14c61a1adc9a3c10a863572817234
 
 | Status | Path |
 | --- | --- |
 | M | `README.md` |
 | M | `app/build.gradle.kts` |
 | A | `app/src/main/baseline-prof.txt` |
-| D | `app/src/main/java/com/aurora/extensions/ThemeEngine.kt` |
 | M | `app/src/main/java/com/aurora/store/AuroraApp.kt` |
 | M | `app/src/main/java/com/aurora/store/ComposeActivity.kt` |
 | M | `app/src/main/java/com/aurora/store/compose/composable/AccountListItem.kt` |

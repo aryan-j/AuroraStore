@@ -44,68 +44,24 @@ index 0000000000000000000000000000000000000000..9e4d128e814ae27599d23784b6b0ef19
 +HPLcom/aurora/store/compose/ui/details/AppDetailsScreenKt;->**(**)**
 +HPLcom/aurora/store/compose/ui/details/composable/DetailsKt;->**(**)**
 +HPLcom/aurora/store/compose/ui/details/composable/ScreenshotsKt;->**(**)**
-diff --git a/app/src/main/java/com/aurora/extensions/ThemeEngine.kt b/app/src/main/java/com/aurora/extensions/ThemeEngine.kt
-deleted file mode 100644
-index 8acdbe9e855d4d0d8c7fcb5481dc61f8180d1798..0000000000000000000000000000000000000000
---- a/app/src/main/java/com/aurora/extensions/ThemeEngine.kt
-+++ /dev/null
-@@ -1,16 +0,0 @@
--/*
-- * SPDX-FileCopyrightText: 2021 Aurora OSS
-- * SPDX-License-Identifier: GPL-3.0-or-later
-- */
--
--package com.aurora.extensions
--
--import androidx.appcompat.app.AppCompatDelegate
--
--fun setAppTheme(themeStyle: Int) {
--    when (themeStyle) {
--        1 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
--        2 -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
--        else -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
--    }
--}
 diff --git a/app/src/main/java/com/aurora/store/AuroraApp.kt b/app/src/main/java/com/aurora/store/AuroraApp.kt
-index 357cbdbdac0cce42cd0ad543a0624aaac8fa073f..5228afae82f25cbec782dc3a2da95c1b616bdf36 100644
+index 357cbdbdac0cce42cd0ad543a0624aaac8fa073f..0008658d33d41dd2c43e96ac712eede7be297f1e 100644
 --- a/app/src/main/java/com/aurora/store/AuroraApp.kt
 +++ b/app/src/main/java/com/aurora/store/AuroraApp.kt
-@@ -20,7 +20,6 @@ import coil3.ImageLoader
- import coil3.SingletonImageLoader
- import coil3.network.okhttp.OkHttpNetworkFetcherFactory
- import coil3.request.crossfade
--import com.aurora.extensions.setAppTheme
- import com.aurora.store.data.event.EventFlow
- import com.aurora.store.data.helper.DownloadHelper
- import com.aurora.store.data.helper.UpdateHelper
-@@ -28,8 +27,6 @@ import com.aurora.store.data.receiver.PackageManagerReceiver
- import com.aurora.store.util.CommonUtil
- import com.aurora.store.util.NotificationUtil
- import com.aurora.store.util.PackageUtil
--import com.aurora.store.util.Preferences
--import com.google.android.material.color.DynamicColors
- import dagger.hilt.android.HiltAndroidApp
- import javax.inject.Inject
- import kotlinx.coroutines.MainScope
-@@ -71,18 +68,6 @@ class AuroraApp : Application(), Configuration.Provider, SingletonImageLoader.Fa
+@@ -71,11 +71,11 @@ class AuroraApp : Application(), Configuration.Provider, SingletonImageLoader.Fa
      override fun onCreate() {
          ComposeMaterial3Flags.isCheckboxStylingFixEnabled = true
          super.onCreate()
 -        // Set the app theme
--        val themeStyle = Preferences.getInteger(this, Preferences.PREFERENCE_THEME_STYLE)
--        setAppTheme(themeStyle)
--
--        // Apply dynamic colors to activities, unless disabled (opt-out, off by default on One UI)
--        val dynamicColors = Preferences.getBoolean(
--            this,
--            Preferences.PREFERENCE_DYNAMIC_COLORS,
--            Preferences.dynamicColorsDefault
--        )
--        if (dynamicColors) DynamicColors.applyToActivitiesIfAvailable(this)
--
-         // Create Notification Channels
-         NotificationUtil.createNotificationChannel(this)
++        // Restore Aurora's original system/light/dark mode selection.
+         val themeStyle = Preferences.getInteger(this, Preferences.PREFERENCE_THEME_STYLE)
+         setAppTheme(themeStyle)
  
+-        // Apply dynamic colors to activities, unless disabled (opt-out, off by default on One UI)
++        // Preserve Aurora's original dynamic Material color overlay behavior.
+         val dynamicColors = Preferences.getBoolean(
+             this,
+             Preferences.PREFERENCE_DYNAMIC_COLORS,
 diff --git a/app/src/main/java/com/aurora/store/ComposeActivity.kt b/app/src/main/java/com/aurora/store/ComposeActivity.kt
 index cfd7976a377381d3a150db7dfa469107e03f3593..9dc77f4481925d6f3ef00e0fdeb4b31abda847a2 100644
 --- a/app/src/main/java/com/aurora/store/ComposeActivity.kt
@@ -3392,151 +3348,68 @@ index 07e8cdcd6ce9b9128f0ceb55135357a897a349fc..6876255342fae91d059dbdc1a204b60c
      @Serializable
      data class PermissionRationale(val requiredPermissions: Set<PermissionType>) : Screen()
 diff --git a/app/src/main/java/com/aurora/store/compose/theme/Color.kt b/app/src/main/java/com/aurora/store/compose/theme/Color.kt
-index 3995533e9a76d140760c2a720197cebfeb4418ed..517fbc6d20bc23b1436df3cd3d82094f5728ddbd 100644
+index 3995533e9a76d140760c2a720197cebfeb4418ed..f244c10f4cc2fa2dcf59a4212e378285b685c445 100644
 --- a/app/src/main/java/com/aurora/store/compose/theme/Color.kt
 +++ b/app/src/main/java/com/aurora/store/compose/theme/Color.kt
-@@ -6,8 +6,6 @@
- package com.aurora.store.compose.theme
- 
- import androidx.compose.material3.MaterialTheme
--import androidx.compose.material3.darkColorScheme
--import androidx.compose.material3.lightColorScheme
- import androidx.compose.runtime.Composable
- import androidx.compose.runtime.ReadOnlyComposable
- import androidx.compose.ui.graphics.Color
-@@ -44,62 +42,3 @@ val colorGreen: Color
- val colorRed: Color
+@@ -45,11 +45,7 @@ val colorRed: Color
      @Composable @ReadOnlyComposable
      get() = if (isAppInDarkTheme()) Color(0xFFE57373) else Color(0xFFD32F2F)
--
+ 
 -/**
 - * Brand color schemes seeded from Aurora's accent (#6C63FF), used on devices that don't support
 - * dynamic color (Android 11 and below) so the full palette stays on-brand instead of falling back
 - * to Material's default purple baseline.
 - */
--val BrandLightColorScheme = lightColorScheme(
--    primary = Color(0xFF6C63FF),
--    onPrimary = Color(0xFFFFFFFF),
--    primaryContainer = Color(0xFFE4DFFF),
--    onPrimaryContainer = Color(0xFF1A0066),
--    secondary = Color(0xFF5C5D72),
--    onSecondary = Color(0xFFFFFFFF),
--    secondaryContainer = Color(0xFFE1E0F9),
--    onSecondaryContainer = Color(0xFF191A2C),
--    tertiary = Color(0xFF78536B),
--    onTertiary = Color(0xFFFFFFFF),
--    tertiaryContainer = Color(0xFFFFD8EE),
--    onTertiaryContainer = Color(0xFF2E1126),
--    background = Color(0xFFFCF8FF),
--    onBackground = Color(0xFF1B1B21),
--    surface = Color(0xFFFCF8FF),
--    onSurface = Color(0xFF1B1B21),
--    surfaceVariant = Color(0xFFE4E1EC),
--    onSurfaceVariant = Color(0xFF47464F),
--    outline = Color(0xFF777680),
--    outlineVariant = Color(0xFFC8C5D0),
--    error = Color(0xFFBA1A1A),
--    onError = Color(0xFFFFFFFF),
--    errorContainer = Color(0xFFFFDAD6),
--    onErrorContainer = Color(0xFF410002)
--)
--
--val BrandDarkColorScheme = darkColorScheme(
--    primary = Color(0xFFC8BFFF),
--    onPrimary = Color(0xFF31149C),
--    primaryContainer = Color(0xFF534BD6),
--    onPrimaryContainer = Color(0xFFE4DFFF),
--    secondary = Color(0xFFC5C4DD),
--    onSecondary = Color(0xFF2E2F42),
--    secondaryContainer = Color(0xFF444559),
--    onSecondaryContainer = Color(0xFFE1E0F9),
--    tertiary = Color(0xFFE8B9D5),
--    onTertiary = Color(0xFF46263B),
--    tertiaryContainer = Color(0xFF5E3C52),
--    onTertiaryContainer = Color(0xFFFFD8EE),
--    background = Color(0xFF131318),
--    onBackground = Color(0xFFE4E1E9),
--    surface = Color(0xFF131318),
--    onSurface = Color(0xFFE4E1E9),
--    surfaceVariant = Color(0xFF47464F),
--    onSurfaceVariant = Color(0xFFC8C5D0),
--    outline = Color(0xFF918F9A),
--    outlineVariant = Color(0xFF47464F),
--    error = Color(0xFFFFB4AB),
--    onError = Color(0xFF690005),
--    errorContainer = Color(0xFF93000A),
--    onErrorContainer = Color(0xFFFFDAD6)
--)
++/** Aurora's original brand palette, used when dynamic colors are disabled or unsupported. */
+ val BrandLightColorScheme = lightColorScheme(
+     primary = Color(0xFF6C63FF),
+     onPrimary = Color(0xFFFFFFFF),
 diff --git a/app/src/main/java/com/aurora/store/compose/theme/Theme.kt b/app/src/main/java/com/aurora/store/compose/theme/Theme.kt
-index 2740ee7249bb88f341415049f91c0e9da4a16e7b..e94bd73bb4944bad6adb5076ea7ef6744328d889 100644
+index 2740ee7249bb88f341415049f91c0e9da4a16e7b..80a807d7c4bb18a48be769adb92d5384b1a60476 100644
 --- a/app/src/main/java/com/aurora/store/compose/theme/Theme.kt
 +++ b/app/src/main/java/com/aurora/store/compose/theme/Theme.kt
-@@ -6,95 +6,44 @@
- 
- package com.aurora.store.compose.theme
- 
--import android.content.SharedPreferences
- import android.os.Build
+@@ -11,6 +11,7 @@ import android.os.Build
  import androidx.activity.compose.LocalActivity
  import androidx.compose.foundation.isSystemInDarkTheme
  import androidx.compose.material3.MaterialExpressiveTheme
 +import androidx.compose.material3.MotionScheme
-+import androidx.compose.material3.darkColorScheme
  import androidx.compose.material3.dynamicDarkColorScheme
  import androidx.compose.material3.dynamicLightColorScheme
-+import androidx.compose.material3.expressiveLightColorScheme
  import androidx.compose.runtime.Composable
--import androidx.compose.runtime.DisposableEffect
- import androidx.compose.runtime.SideEffect
--import androidx.compose.runtime.getValue
--import androidx.compose.runtime.mutableIntStateOf
--import androidx.compose.runtime.mutableStateOf
--import androidx.compose.runtime.remember
--import androidx.compose.runtime.setValue
- import androidx.compose.ui.platform.LocalContext
- import androidx.compose.ui.platform.LocalView
- import androidx.core.view.WindowCompat
--import com.aurora.store.util.Preferences
- 
- /**
-  * App theme for Aurora Store based on [MaterialExpressiveTheme]
-  */
+@@ -32,7 +33,6 @@ import com.aurora.store.util.Preferences
  @Composable
  fun AuroraTheme(content: @Composable () -> Unit) {
-+    val darkTheme = isSystemInDarkTheme()
      val context = LocalContext.current
 -
--    var themeStyle by remember {
--        mutableIntStateOf(Preferences.getInteger(context, Preferences.PREFERENCE_THEME_STYLE))
--    }
--    var dynamicColor by remember {
--        mutableStateOf(
--            Preferences.getBoolean(
--                context,
--                Preferences.PREFERENCE_DYNAMIC_COLORS,
--                Preferences.dynamicColorsDefault
--            )
--        )
--    }
+     var themeStyle by remember {
+         mutableIntStateOf(Preferences.getInteger(context, Preferences.PREFERENCE_THEME_STYLE))
+     }
+@@ -45,7 +45,7 @@ fun AuroraTheme(content: @Composable () -> Unit) {
+             )
+         )
+     }
 -    DisposableEffect(Unit) {
--        val prefs = Preferences.getPrefs(context)
--        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
--            when (key) {
--                Preferences.PREFERENCE_THEME_STYLE ->
--                    themeStyle = Preferences.getInteger(context, key)
--
--                Preferences.PREFERENCE_DYNAMIC_COLORS ->
++    DisposableEffect(context) {
+         val prefs = Preferences.getPrefs(context)
+         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+             when (key) {
+@@ -53,48 +53,37 @@ fun AuroraTheme(content: @Composable () -> Unit) {
+                     themeStyle = Preferences.getInteger(context, key)
+ 
+                 Preferences.PREFERENCE_DYNAMIC_COLORS ->
 -                    dynamicColor =
 -                        Preferences.getBoolean(context, key, Preferences.dynamicColorsDefault)
--            }
-+    val colorScheme = when {
-+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
++                    dynamicColor = Preferences.getBoolean(
++                        context,
++                        key,
++                        Preferences.dynamicColorsDefault
++                    )
+             }
          }
--        prefs.registerOnSharedPreferenceChangeListener(listener)
--        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
--    }
--    val useDynamicColor = dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+         prefs.registerOnSharedPreferenceChangeListener(listener)
+         onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+     }
+     val useDynamicColor = dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 -
 -    val lightScheme = if (useDynamicColor) {
 -        dynamicLightColorScheme(context)
@@ -3556,13 +3429,18 @@ index 2740ee7249bb88f341415049f91c0e9da4a16e7b..e94bd73bb4944bad6adb5076ea7ef674
 -        else -> if (isSystemInDarkTheme()) darkScheme else lightScheme
 -    }
 -
--    val darkTheme = when (themeStyle) {
--        1 -> false
--        2 -> true
++    val lightScheme =
++        if (useDynamicColor) dynamicLightColorScheme(context) else BrandLightColorScheme
++    val darkScheme =
++        if (useDynamicColor) dynamicDarkColorScheme(context) else BrandDarkColorScheme
++    val systemDarkTheme = isSystemInDarkTheme()
+     val darkTheme = when (themeStyle) {
+         1 -> false
+         2 -> true
 -        else -> isSystemInDarkTheme()
-+        darkTheme -> darkColorScheme()
-+        else -> expressiveLightColorScheme()
++        else -> systemDarkTheme
      }
++    val colorScheme = if (darkTheme) darkScheme else lightScheme
  
      /**
 -     * Keep the status/navigation bar icon appearance in sync with the theme's light/dark mode.
@@ -3575,11 +3453,11 @@ index 2740ee7249bb88f341415049f91c0e9da4a16e7b..e94bd73bb4944bad6adb5076ea7ef674
 -     * the user can force a light/dark theme that differs from the system, and that isn't known when
 -     * edge-to-edge is first configured.
 +     * otherwise strip the system contrast scrim. Re-applying the appearance keeps the icons correct
-+     * when Android switches the app between its system light and dark configurations.
++     * when Android or the app's saved theme preference switches between light and dark modes.
       */
      val view = LocalView.current
      val activity = LocalActivity.current
-@@ -110,5 +59,9 @@ fun AuroraTheme(content: @Composable () -> Unit) {
+@@ -110,5 +99,9 @@ fun AuroraTheme(content: @Composable () -> Unit) {
          }
      }
  
@@ -9226,7 +9104,7 @@ index 45bee12c449378b20c9b46637dff854b73059335..69409be3280e0ab8c47b700fcacf1af5
          }
      }
 diff --git a/app/src/main/java/com/aurora/store/compose/ui/preferences/UIPreferenceScreen.kt b/app/src/main/java/com/aurora/store/compose/ui/preferences/UIPreferenceScreen.kt
-index f77dc6c0e7c96cc14f908b8727604394af6716b8..1f4ec58c9bf65f4ae389818ccffae59f1c8dba2a 100644
+index f77dc6c0e7c96cc14f908b8727604394af6716b8..986468c3e2af726d18d1ecd2f1afb13cc00705c0 100644
 --- a/app/src/main/java/com/aurora/store/compose/ui/preferences/UIPreferenceScreen.kt
 +++ b/app/src/main/java/com/aurora/store/compose/ui/preferences/UIPreferenceScreen.kt
 @@ -11,8 +11,6 @@ import androidx.compose.foundation.clickable
@@ -9238,71 +9116,38 @@ index f77dc6c0e7c96cc14f908b8727604394af6716b8..1f4ec58c9bf65f4ae389818ccffae59f
  import androidx.compose.material3.Scaffold
  import androidx.compose.material3.Switch
  import androidx.compose.material3.Text
-@@ -30,18 +28,14 @@ import androidx.compose.ui.res.stringResource
- import androidx.compose.ui.tooling.preview.Preview
- import androidx.compose.ui.tooling.preview.PreviewWrapper
- import androidx.core.net.toUri
--import com.aurora.extensions.isSAndAbove
- import com.aurora.extensions.isTAndAbove
--import com.aurora.extensions.setAppTheme
- import com.aurora.store.R
- import com.aurora.store.compose.composable.TopAppBar
- import com.aurora.store.compose.preview.ThemePreviewProvider
- import com.aurora.store.compose.ui.preferences.network.SingleChoiceDialog
- import com.aurora.store.util.Preferences
- import com.aurora.store.util.Preferences.PREFERENCE_DEFAULT_SELECTED_TAB
--import com.aurora.store.util.Preferences.PREFERENCE_DYNAMIC_COLORS
- import com.aurora.store.util.Preferences.PREFERENCE_FOR_YOU
--import com.aurora.store.util.Preferences.PREFERENCE_THEME_STYLE
- import com.aurora.store.util.save
- 
- @Composable
-@@ -53,10 +47,6 @@ fun UIPreferenceScreen() {
- private fun ScreenContent() {
+@@ -54,16 +52,10 @@ private fun ScreenContent() {
      val context = LocalContext.current
  
--    val themeEntries = stringArrayResource(R.array.pref_theme_style)
--    var themeStyle by remember {
--        mutableIntStateOf(Preferences.getInteger(context, PREFERENCE_THEME_STYLE))
--    }
-     val tabEntries = stringArrayResource(R.array.pref_default_tab)
-     var selectedTab by remember {
-         mutableIntStateOf(Preferences.getInteger(context, PREFERENCE_DEFAULT_SELECTED_TAB))
-@@ -64,33 +54,8 @@ private fun ScreenContent() {
-     var forYou by remember {
-         mutableStateOf(Preferences.getBoolean(context, PREFERENCE_FOR_YOU, true))
+     val themeEntries = stringArrayResource(R.array.pref_theme_style)
++    val tabEntries = stringArrayResource(R.array.pref_default_tab)
+     var themeStyle by remember {
+         mutableIntStateOf(Preferences.getInteger(context, PREFERENCE_THEME_STYLE))
      }
--    var dynamicColors by remember {
--        mutableStateOf(
--            Preferences.getBoolean(
--                context,
--                PREFERENCE_DYNAMIC_COLORS,
--                Preferences.dynamicColorsDefault
--            )
--        )
+-    val tabEntries = stringArrayResource(R.array.pref_default_tab)
+-    var selectedTab by remember {
+-        mutableIntStateOf(Preferences.getInteger(context, PREFERENCE_DEFAULT_SELECTED_TAB))
 -    }
--    var showThemeDialog by remember { mutableStateOf(false) }
+-    var forYou by remember {
+-        mutableStateOf(Preferences.getBoolean(context, PREFERENCE_FOR_YOU, true))
+-    }
+     var dynamicColors by remember {
+         mutableStateOf(
+             Preferences.getBoolean(
+@@ -73,6 +65,12 @@ private fun ScreenContent() {
+             )
+         )
+     }
++    var selectedTab by remember {
++        mutableIntStateOf(Preferences.getInteger(context, PREFERENCE_DEFAULT_SELECTED_TAB))
++    }
++    var forYou by remember {
++        mutableStateOf(Preferences.getBoolean(context, PREFERENCE_FOR_YOU, true))
++    }
+     var showThemeDialog by remember { mutableStateOf(false) }
      var showTabDialog by remember { mutableStateOf(false) }
  
--    if (showThemeDialog) {
--        SingleChoiceDialog(
--            title = stringResource(R.string.pref_ui_theme),
--            options = themeEntries.toList(),
--            selected = themeStyle,
--            onSelect = { index ->
--                themeStyle = index
--                context.save(PREFERENCE_THEME_STYLE, index)
--                setAppTheme(index)
--                showThemeDialog = false
--            },
--            onDismiss = { showThemeDialog = false }
--        )
--    }
--
-     if (showTabDialog) {
-         SingleChoiceDialog(
-             title = stringResource(R.string.pref_ui_layout_tab),
-@@ -119,7 +84,7 @@ private fun ScreenContent() {
+@@ -119,7 +117,7 @@ private fun ScreenContent() {
          ) {
              if (isTAndAbove) {
                  item {
@@ -9311,7 +9156,7 @@ index f77dc6c0e7c96cc14f908b8727604394af6716b8..1f4ec58c9bf65f4ae389818ccffae59f
                          modifier = Modifier.clickable {
                              context.startActivity(
                                  Intent(Settings.ACTION_APP_LOCALE_SETTINGS).apply {
-@@ -132,57 +97,17 @@ private fun ScreenContent() {
+@@ -132,20 +130,19 @@ private fun ScreenContent() {
                      )
                  }
              }
@@ -9319,42 +9164,35 @@ index f77dc6c0e7c96cc14f908b8727604394af6716b8..1f4ec58c9bf65f4ae389818ccffae59f
 -            item {
 -                ListItem(headlineContent = { Text(stringResource(R.string.pref_ui_theme)) })
 -            }
--            item {
--                ListItem(
--                    modifier = Modifier.clickable { showThemeDialog = true },
--                    headlineContent = { Text(stringResource(R.string.pref_ui_theme)) },
--                    supportingContent = { Text(themeEntries.getOrElse(themeStyle) { "" }) }
--                )
--            }
--            if (isSAndAbove) {
--                item {
--                    ListItem(
--                        modifier = Modifier.clickable {
--                            dynamicColors = !dynamicColors
--                            context.save(PREFERENCE_DYNAMIC_COLORS, dynamicColors)
--                        },
--                        headlineContent = { Text(stringResource(R.string.pref_ui_dynamic_color)) },
--                        supportingContent = {
--                            Text(stringResource(R.string.pref_ui_dynamic_color_desc))
--                        },
--                        trailingContent = {
--                            Switch(
--                                checked = dynamicColors,
--                                onCheckedChange = { checked ->
--                                    dynamicColors = checked
--                                    context.save(PREFERENCE_DYNAMIC_COLORS, checked)
--                                }
--                            )
--                        }
--                    )
--                }
--            }
--            item { HorizontalDivider() }
-+            item { PreferenceSectionHeader(stringResource(R.string.pref_ui_layout)) }
++            item { PreferenceSectionHeader(stringResource(R.string.pref_ui_theme)) }
              item {
+-                ListItem(
++                PreferenceListItem(
+                     modifier = Modifier.clickable { showThemeDialog = true },
+                     headlineContent = { Text(stringResource(R.string.pref_ui_theme)) },
+-                    supportingContent = { Text(themeEntries.getOrElse(themeStyle) { "" }) }
++                    supportingContent = {
++                        Text(themeEntries.getOrElse(themeStyle) { "" })
++                    }
+                 )
+             }
+             if (isSAndAbove) {
+                 item {
+-                    ListItem(
++                    PreferenceListItem(
+                         modifier = Modifier.clickable {
+                             dynamicColors = !dynamicColors
+                             context.save(PREFERENCE_DYNAMIC_COLORS, dynamicColors)
+@@ -166,23 +163,17 @@ private fun ScreenContent() {
+                     )
+                 }
+             }
+-            item { HorizontalDivider() }
+-            item {
 -                ListItem(headlineContent = { Text(stringResource(R.string.pref_ui_layout)) })
 -            }
--            item {
++            item { PreferenceSectionHeader(stringResource(R.string.pref_ui_layout)) }
+             item {
 -                ListItem(
 +                PreferenceListItem(
                      modifier = Modifier.clickable { showTabDialog = true },
@@ -10977,34 +10815,20 @@ index ac92dca004ce4aba257a31885fb58d15efed2fa1..8f133418ebb87f41d92a51cacf943c8a
                  onNavigateTo(Destination.AppUpdate(update))
              },
 diff --git a/app/src/main/java/com/aurora/store/util/Preferences.kt b/app/src/main/java/com/aurora/store/util/Preferences.kt
-index fb82fdef796887802ed410ecc30035602a4677d6..86ebdc7c938e62b25bc741f3b727ea110b4eb673 100644
+index fb82fdef796887802ed410ecc30035602a4677d6..4b280a148d17e6076c88f826c551dfd6529937a7 100644
 --- a/app/src/main/java/com/aurora/store/util/Preferences.kt
 +++ b/app/src/main/java/com/aurora/store/util/Preferences.kt
-@@ -10,24 +10,14 @@ import android.content.SharedPreferences
- import androidx.core.content.edit
- import androidx.fragment.app.Fragment
- import androidx.preference.PreferenceManager
--import com.aurora.extensions.isOneUI
- import com.aurora.store.BuildConfig
- 
- object Preferences {
- 
+@@ -18,8 +18,8 @@ object Preferences {
      const val PREFERENCE_DEFAULT = "PREFERENCE_DEFAULT"
  
--    /**
+     /**
 -     * Default for [PREFERENCE_DYNAMIC_COLORS]. Dynamic color is opt-out everywhere except One UI,
 -     * where Samsung's palette extraction tends to look off, so it defaults off and users can opt in.
--     */
--    val dynamicColorsDefault: Boolean
--        get() = !isOneUI
--
-     const val PREFERENCE_AUTH_DATA = "PREFERENCE_AUTH_DATA"
-     const val PREFERENCE_INSTALLER_ID = "PREFERENCE_INSTALLER_ID"
--    const val PREFERENCE_THEME_STYLE = "PREFERENCE_THEME_STYLE"
--    const val PREFERENCE_DYNAMIC_COLORS = "PREFERENCE_DYNAMIC_COLORS"
-     const val PREFERENCE_FOR_YOU = "PREFERENCE_FOR_YOU"
-     const val PREFERENCE_DEFAULT_SELECTED_TAB = "PREFERENCE_DEFAULT_SELECTED_TAB"
-     const val PREFERENCE_INTRO = "PREFERENCE_INTRO"
++     * Dynamic color is opt-out everywhere except One UI, where Samsung's palette extraction
++     * defaults to off but can be enabled by the user.
+      */
+     val dynamicColorsDefault: Boolean
+         get() = !isOneUI
 diff --git a/app/src/main/java/com/aurora/store/viewmodel/all/UpdatesViewModel.kt b/app/src/main/java/com/aurora/store/viewmodel/all/UpdatesViewModel.kt
 index 72bde1b7af2d84e6bb9b8efe692c05a3782c08c6..d05e27275316f89bd26f60447b47bf79c513c5f4 100644
 --- a/app/src/main/java/com/aurora/store/viewmodel/all/UpdatesViewModel.kt
